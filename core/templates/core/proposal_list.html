@@ -1,0 +1,438 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .page-title { font-size: 1.8rem; color: var(--text-color); margin: 0 0 20px 0; font-weight: 700; }
+    .btn-primary { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary:hover { background: #2563eb; }
+    
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .status-ChoDuyet { background: #fef3c7; color: #d97706; }
+    .status-DaDuyet { background: #d1fae5; color: #059669; }
+    .status-TuChoi { background: #fee2e2; color: #ef4444; }
+    
+    .custom-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .custom-table th { padding: 15px 10px; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+    .custom-table td { padding: 15px 10px; font-size: 0.9rem; color: var(--text-color); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; }
+    .close-modal { background: none; border: none; cursor: pointer; color: #94a3b8; }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; }
+    .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; color: white; }
+    .btn-approve { background: #10b981; }
+    .btn-reject { background: #ef4444; }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
+    <h1 class="page-title">Đề Xuất Giá Cơ Sở</h1>
+    {% if not user.is_superuser %}
+    <button class="btn-primary" onclick="openProposalModal()">+ Tạo Đề Xuất Giá</button>
+    {% endif %}
+</div>
+
+<div class="glass-card" id="proposal-list-container" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+    <div style="flex: 1; overflow-y: auto;">
+    <table class="custom-table" style="margin: 0;">
+        <thead style="background: #f8fafc; position: sticky; top: 0; z-index: 10;">
+            <tr>
+                <th>Tuyến & Loại xe</th>
+                <th>Giá GCS Hiện tại</th>
+                <th>Giá Đề xuất</th>
+                <th>Lý do & Người ĐX</th>
+                <th>Ngày tạo</th>
+                <th>Trạng thái</th>
+                {% if user.is_superuser %}
+                <th style="text-align: right;">Thao tác</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in proposals %}
+            <tr>
+                <td>
+                    <strong>{{ p.tuyen.tinh_nhan }} → {{ p.tuyen.tinh_giao }}</strong><br>
+                    <span style="color: var(--text-muted);">{{ p.loai_xe }} / {{ p.so_khoi|default:"-" }}</span>
+                </td>
+                <td style="font-weight: 600;">{% if p.gia_hien_tai %}{{ p.gia_hien_tai|floatformat:0 }}đ{% else %}-{% endif %}</td>
+                <td style="font-weight: 700; color: #0284c7;">{{ p.gia_de_xuat|floatformat:0 }}đ</td>
+                <td>
+                    <div style="font-size: 0.85rem;">
+                        <span style="font-weight: 600;">Người ĐX:</span> {{ p.nguoi_de_xuat }}<br>
+                        <span style="font-weight: 600;">Lý do:</span> {{ p.ly_do_de_xuat }}
+                    </div>
+                </td>
+                <td>{{ p.ngay_tao|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="status-badge status-{{ p.trang_thai }}">
+                        {% if p.trang_thai == 'ChoDuyet' %}Chờ duyệt
+                        {% elif p.trang_thai == 'DaDuyet' %}Đã duyệt
+                        {% else %}Từ chối{% endif %}
+                    </span>
+                </td>
+                {% if user.is_superuser %}
+                <td style="text-align: right;">
+                    {% if p.trang_thai == 'ChoDuyet' %}
+                    <button class="btn-action btn-approve" onclick="approveProposal({{ p.id }})">Duyệt</button>
+                    <button class="btn-action btn-reject" onclick="rejectProposal({{ p.id }})" style="margin-left: 5px;">Từ chối</button>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align: center; padding: 30px;">Chưa có đề xuất nào.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<!-- Modal Tạo Đề Xuất -->
+<div id="proposalModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Tạo Đề Xuất Giá Mới</h2>
+            <button class="close-modal" onclick="closeProposalModal()"><svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Tỉnh nhận *</label>
+            <select id="propTinhNhan" class="form-control province-select" data-target="propHuyenNhan"><option value="">Chọn Tỉnh</option></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Quận/Huyện nhận</label>
+            <select id="propHuyenNhan" class="form-control district-select"><option value="">Chọn Huyện</option></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tỉnh giao *</label>
+            <select id="propTinhGiao" class="form-control province-select" data-target="propHuyenGiao"><option value="">Chọn Tỉnh</option></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Quận/Huyện giao</label>
+            <select id="propHuyenGiao" class="form-control district-select"><option value="">Chọn Huyện</option></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Loại xe *</label>
+            <select id="propLoaiXe" class="form-control" onchange="handleLoaiXeInput(this, 'propSoKhoi')">
+                <option value="">Chọn loại xe</option>
+                <option value="1.25T">1.25T</option>
+                <option value="2T">2T</option>
+                <option value="3.5T">3.5T</option>
+                <option value="5T">5T</option>
+                <option value="7T">7T</option>
+                <option value="9T">9T</option>
+                <option value="11T">11T</option>
+                <option value="15T">15T</option>
+                <option value="LTL">LTL</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Số khối (Tùy chọn)</label>
+            <select id="propSoKhoi" class="form-control" onchange="handleSoKhoiInput(this, 'propLoaiXe')">
+                <option value="">Chọn số khối</option>
+                <option value="0-6">0-6</option>
+                <option value="7-10">7-10</option>
+                <option value="11-14">11-14</option>
+                <option value="15-18">15-18</option>
+                <option value="19-28">19-28</option>
+                <option value="29-30">29-30</option>
+                <option value="31-35">31-35</option>
+                <option value="36-40">36-40</option>
+                <option value=">40">>40</option>
+                <option value="LTL">LTL</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="currentGcsBox">
+            <label class="form-label" style="color: #0284c7;">Giá cơ sở hiện tại (đ)</label>
+            <input type="text" id="currentGcsValue" class="form-control" disabled style="background: #e0f2fe; color: #0284c7; font-weight: bold; border-color: #bae6fd;" value="Vui lòng chọn Tỉnh và Loại xe">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Giá đề xuất *</label>
+            <input type="text" id="propGiaDeXuat" class="form-control vn-number text-right">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Lý do đề xuất *</label>
+            <textarea id="propLyDo" class="form-control" rows="3"></textarea>
+        </div>
+        
+        {% csrf_token %}
+        <button type="button" class="btn-primary" style="width: 100%; margin-top: 10px;" onclick="submitProposal()">Gửi Đề Xuất</button>
+    </div>
+</div>
+
+<script>
+    function openProposalModal() { document.getElementById('proposalModal').style.display = 'flex'; }
+    function closeProposalModal() { document.getElementById('proposalModal').style.display = 'none'; }
+    
+    async function fetchBasePrice() {
+        const tn = document.getElementById('propTinhNhan').value;
+        const tg = document.getElementById('propTinhGiao').value;
+        const lx = document.getElementById('propLoaiXe').value;
+        if (!tn || !tg || !lx) return;
+        
+        try {
+            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lx)}`);
+            const data = await res.json();
+            if (data.success && data.gia_co_so) {
+                document.getElementById('currentGcsValue').value = data.gia_co_so.toLocaleString();
+                if(data.so_khoi) {
+                    $('#propSoKhoi').val(data.so_khoi).trigger('change.select2');
+                }
+            } else {
+                document.getElementById('currentGcsValue').value = 'Chưa có dữ liệu';
+            }
+        } catch(e) {}
+    }
+    
+    async function submitProposal() {
+        try {
+            console.log("Submitting proposal...");
+            const payload = {
+                tinh_nhan: $('#propTinhNhan').val() || '',
+                huyen_nhan: $('#propHuyenNhan').val() || '',
+                tinh_giao: $('#propTinhGiao').val() || '',
+                huyen_giao: $('#propHuyenGiao').val() || '',
+                loai_xe: $('#propLoaiXe').val() || '',
+                so_khoi: $('#propSoKhoi').val() || '',
+                gia_de_xuat: $('#propGiaDeXuat').val() || '',
+                ly_do: $('#propLyDo').val() || '',
+            };
+            console.log("Payload:", payload);
+            
+            if (!payload.tinh_nhan || !payload.tinh_giao || !payload.loai_xe || !payload.gia_de_xuat || !payload.ly_do) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Thiếu thông tin', 'Vui lòng điền đủ các thông tin bắt buộc (*)', 'warning');
+                } else {
+                    alert('Vui lòng điền đủ các thông tin bắt buộc (*)');
+                }
+                return;
+            }
+            
+            let csrfToken = null;
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) {
+                csrfToken = csrfInput.value;
+            } else {
+                csrfToken = getCookie('csrftoken');
+            }
+            
+            if (!csrfToken) {
+                console.error("No CSRF token found");
+                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Lỗi CSRF Token, vui lòng tải lại trang', 'error');
+                else alert('Lỗi CSRF Token');
+                return;
+            }
+
+            const res = await fetch('/api/proposals/create/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: 'Đã gửi đề xuất thành công!',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    alert('Đã gửi đề xuất thành công!');
+                    window.location.reload();
+                }
+            } else {
+                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+                else alert('Lỗi: ' + (data.error || 'Có lỗi xảy ra'));
+            }
+        } catch(e) { 
+            console.error("Exception in submitProposal:", e);
+            if (typeof Swal !== 'undefined') Swal.fire('Lỗi hệ thống', e.message, 'error'); 
+            else alert('Lỗi hệ thống: ' + e.message);
+        }
+    }
+    
+    async function approveProposal(id) {
+        const result = await Swal.fire({
+            title: 'Duyệt đề xuất?',
+            text: 'Duyệt đề xuất này và cập nhật vào Giá cơ sở?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Duyệt!',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
+
+        const res = await fetch(`/api/proposals/${id}/approve/`, {
+            method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+        const data = await res.json();
+        if(data.success) {
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã duyệt đề xuất.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+        else Swal.fire('Lỗi', data.error, 'error');
+    }
+    
+    async function rejectProposal(id) {
+        const result = await Swal.fire({
+            title: 'Từ chối đề xuất?',
+            text: 'Bạn có chắc chắn muốn từ chối đề xuất này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Từ chối!',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
+        
+        const res = await fetch(`/api/proposals/${id}/reject/`, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if(data.success) {
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã từ chối đề xuất.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+        else Swal.fire('Lỗi', data.error, 'error');
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function handleLoaiXeInput(input, targetId) {
+        const val = input.value.toString().toLowerCase().replace(/t$/, '').trim();
+        const map = {
+            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
+            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'ltl': 'LTL'
+        };
+        if (map[val] !== undefined) {
+            let target = $('#' + targetId);
+            if (target.val() !== map[val]) {
+                target.val(map[val]).trigger('change');
+            }
+        }
+    }
+
+    function handleSoKhoiInput(input, targetId) {
+        const val = input.value.toString().trim();
+        const map = {
+            '0-6': '1.25T', '7-10': '2T', '11-14': '3.5T', '15-18': '5T',
+            '19-28': '7T', '29-30': '9T', '31-35': '11T', '36-40': '15T', 'LTL': 'LTL'
+        };
+        if (map[val] !== undefined) {
+            let target = $('#' + targetId);
+            if (target.val() !== map[val]) {
+                target.val(map[val]).trigger('change');
+            }
+        }
+    }
+
+    let provincesData = [];
+    async function loadProvinces() {
+        try {
+            const res = await fetch('https://provinces.open-api.vn/api/?depth=2');
+            provincesData = await res.json();
+            
+            document.querySelectorAll('.province-select').forEach(sel => {
+                populateProvinceSelect(sel);
+            });
+        } catch (e) {
+            console.error("Lỗi API Tỉnh:", e);
+        }
+    }
+
+    function populateProvinceSelect(selectElement) {
+        let options = '<option value="">Chọn Tỉnh</option>';
+        provincesData.forEach(p => {
+            let name = p.name.replace(/^(Tỉnh|Thành phố)\s+/i, '');
+            options += `<option value="${name}" data-code="${p.code}">${name}</option>`;
+        });
+        selectElement.innerHTML = options;
+        $(selectElement).select2({ width: '100%' });
+    }
+
+    function populateDistrictSelect(selectElement, provinceCode) {
+        let prov = provincesData.find(p => p.code == provinceCode);
+        let options = '<option value="">Chọn Huyện</option>';
+        if (prov && prov.districts) {
+            prov.districts.forEach(d => {
+                let name = d.name.replace(/^(Huyện|Quận|Thị xã|Thành phố)\s+/i, '');
+                if (!isNaN(name) && d.name.toLowerCase().startsWith('quận')) {
+                    name = 'Quận ' + name;
+                }
+                options += `<option value="${name}">${name}</option>`;
+            });
+        }
+        selectElement.innerHTML = options;
+        $(selectElement).select2({ width: '100%' });
+    }
+
+    $(document).on('change', '.province-select', function(e) {
+        let targetId = e.target.getAttribute('data-target');
+        let districtSelect = document.getElementById(targetId);
+        if (districtSelect) {
+            let opt = e.target.options[e.target.selectedIndex];
+            if(opt) {
+                let code = opt.getAttribute('data-code');
+                populateDistrictSelect(districtSelect, code);
+            }
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProvinces();
+        $('#propLoaiXe').select2({ width: '100%' });
+        $('#propSoKhoi').select2({ width: '100%' });
+        $('.district-select').select2({ width: '100%' });
+        
+        $('#propTinhNhan, #propTinhGiao, #propLoaiXe, #propSoKhoi').on('change', function() {
+            fetchBasePrice();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,329 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPV Group - Quản Lý Giá & Đối Tác</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --surface-color: #ffffff;
+            --primary-color: #0284c7;
+            --secondary-color: #e0f2fe;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 260px;
+            background: var(--primary-color);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.05);
+        }
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .sidebar-logo img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .nav-link {
+            color: #bae6fd;
+            text-decoration: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        h1, h2, h3 { margin-top: 0; color: var(--primary-color); }
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #f8fafc;
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+            background: white;
+        }
+        .form-control-sm {
+            padding: 6px 10px;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+        .btn-primary:hover {
+            background: #0369a1;
+        }
+        .btn-secondary {
+            background: white;
+            color: var(--text-color);
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .btn-secondary:hover {
+            background: #f1f5f9;
+        }
+        .content-scroll::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+        /* Select2 override */
+        .select2-container .select2-selection--single {
+            height: 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 38px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--text-color);
+            line-height: normal;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <img src="{% static 'core/logo.png' %}?v=2" alt="NPV Group Logo">
+        </div>
+        <a href="{% url 'search_prices' %}" class="nav-link">🔍 Tra Cứu Giá Thuê Ngoài</a>
+        <a href="{% url 'base_price_list' %}" class="nav-link">💰 Quản Lý Giá Cơ Sở</a>
+        <a href="/partners/" class="nav-link">🏢 Quản Lý Đối Tác</a>
+        <a href="{% url 'proposal_list' %}" class="nav-link" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📄 Đề Xuất Giá</span>
+            <span id="sidebar-proposal-count" style="background:#ef4444; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; display:none;">0</span>
+        </a>
+        
+        <div style="flex: 1;"></div>
+        
+        {% if user.is_authenticated %}
+        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; color: white; margin-top: auto;">
+            <div style="font-size: 0.85rem; color: #bae6fd; margin-bottom: 5px;">Tài khoản đăng nhập</div>
+            <div style="font-weight: 600; margin-bottom: 15px; display: flex; align-items: center;">
+                <svg style="width:16px; height:16px; margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                {{ user.username }}
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" style="width: 100%; background: transparent; border: 1px solid #bae6fd; color: white; padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight:600;">
+                    Đăng xuất
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function formatVnNumber(val) {
+            if (!val) return '';
+            let isNegative = val.toString().startsWith('-');
+            let clean = val.toString().replace(/[^0-9]/g, '');
+            if (!clean) return isNegative ? '-' : '';
+            // Sử dụng regex để định dạng hàng nghìn
+            let formatted = clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return isNegative ? '-' + formatted : formatted;
+        }
+
+        function unformatVnNumber(val) {
+            if (!val) return '';
+            let isNegative = val.toString().startsWith('-');
+            let clean = val.toString().replace(/[^0-9]/g, '');
+            if (!clean) return isNegative ? '-' : '';
+            return isNegative ? '-' + clean : clean;
+        }
+
+        // Định dạng các input có sẵn khi tải trang
+        document.querySelectorAll('.vn-number').forEach(function(el) {
+            el.value = formatVnNumber(el.value);
+        });
+
+        // Khi người dùng click vào ô (focus) -> Xóa định dạng để nhập liệu không bị lỗi
+        document.addEventListener('focus', function(e) {
+            if (e.target.classList && e.target.classList.contains('vn-number')) {
+                e.target.value = unformatVnNumber(e.target.value);
+            }
+        }, true); // Dùng true (capture phase) vì focus không bubble
+
+        // Khi người dùng click ra ngoài (blur) -> Kiểm tra và định dạng lại
+        document.addEventListener('blur', function(e) {
+            if (e.target.classList && e.target.classList.contains('vn-number')) {
+                let unformatted = unformatVnNumber(e.target.value);
+                if (unformatted !== '' && parseFloat(unformatted) < 0) {
+                    Swal.fire('Chú ý', 'Số tiền không hợp lý (< 0). Vui lòng nhập lại.', 'warning');
+                    e.target.value = '';
+                    return;
+                }
+                e.target.value = formatVnNumber(e.target.value);
+            }
+        }, true); // Dùng true (capture phase) vì blur không bubble
+    });
+
+    {% if user.is_authenticated %}
+    document.addEventListener("DOMContentLoaded", function() {
+        let lastProposalCount = -1;
+        
+        function checkNewProposals() {
+            fetch('/api/check-new-proposals/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let badge = document.getElementById('sidebar-proposal-count');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.style.display = 'inline-block';
+                                badge.innerText = data.count;
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+
+                        if (lastProposalCount !== -1 && data.count > lastProposalCount) {
+                            let audio = new Audio("data:audio/wav;base64,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");
+                            audio.play().catch(e => console.log('Audio play error:', e));
+                            
+                            let title = data.role === 'admin' ? 'Có đề xuất mới!' : 'Cập nhật đề xuất!';
+                            let text = data.role === 'admin' ? 'Vui lòng kiểm tra danh sách đề xuất giá.' : 'Đề xuất của bạn vừa được xử lý.';
+                            
+                            if (data.role === 'partner' && data.latest_status) {
+                                if (data.latest_status === 'DaDuyet') {
+                                    title = 'Đề xuất đã được duyệt!';
+                                    text = 'Một đề xuất của bạn vừa được duyệt.';
+                                } else if (data.latest_status === 'TuChoi') {
+                                    title = 'Đề xuất bị từ chối!';
+                                    text = 'Một đề xuất của bạn vừa bị từ chối.';
+                                }
+                            }
+                            
+                            Swal.fire({
+                                title: title,
+                                text: text,
+                                icon: 'success',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000
+                            });
+                            
+                            if (window.location.pathname.includes('/proposals/')) {
+                                fetch(window.location.href)
+                                .then(r => r.text())
+                                .then(html => {
+                                    let parser = new DOMParser();
+                                    let doc = parser.parseFromString(html, 'text/html');
+                                    let newContainer = doc.getElementById('proposal-list-container');
+                                    let oldContainer = document.getElementById('proposal-list-container');
+                                    if (newContainer && oldContainer) {
+                                        oldContainer.innerHTML = newContainer.innerHTML;
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                });
+                            }
+                        }
+                        lastProposalCount = data.count;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        setInterval(checkNewProposals, 5000);
+        checkNewProposals();
+    });
+    {% endif %}
+    </script>
+</body>
+</html>

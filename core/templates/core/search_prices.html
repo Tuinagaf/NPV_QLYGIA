@@ -1,0 +1,288 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-shrink: 0;">
+    <h2 style="margin: 0; color: var(--text-color); font-size: 1.5rem;">Tra Cứu Giá Thuê Ngoài</h2>
+</div>
+
+<div class="glass-card" style="margin-bottom: 24px; flex-shrink: 0;">
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr) auto; gap: 15px; align-items: end;">
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Tỉnh/Thành nhận</label>
+            <select id="filterTinhNhan" class="form-control province-select" data-target="filterHuyenNhan"><option value="">Tất cả</option></select>
+        </div>
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Quận/Huyện nhận</label>
+            <select id="filterHuyenNhan" class="form-control district-select"><option value="">Tất cả</option></select>
+        </div>
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Tỉnh/Thành giao</label>
+            <select id="filterTinhGiao" class="form-control province-select" data-target="filterHuyenGiao"><option value="">Tất cả</option></select>
+        </div>
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Quận/Huyện giao</label>
+            <select id="filterHuyenGiao" class="form-control district-select"><option value="">Tất cả</option></select>
+        </div>
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Loại xe</label>
+            <select id="filterLoaiXe" class="form-control">
+                <option value="">Chọn loại xe</option>
+                <option value="1.25T">1.25T</option>
+                <option value="2T">2T</option>
+                <option value="3.5T">3.5T</option>
+                <option value="5T">5T</option>
+                <option value="7T">7T</option>
+                <option value="9T">9T</option>
+                <option value="11T">11T</option>
+                <option value="15T">15T</option>
+                <option value="LTL">LTL</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label" style="font-size: 0.8rem">Số khối</label>
+            <select id="filterKhoi" class="form-control">
+                <option value="">Tất cả</option>
+                <option value="0-6">0-6</option>
+                <option value="7-10">7-10</option>
+                <option value="11-14">11-14</option>
+                <option value="15-18">15-18</option>
+                <option value="19-28">19-28</option>
+                <option value="29-30">29-30</option>
+                <option value="31-35">31-35</option>
+                <option value="36-40">36-40</option>
+                <option value=">40">>40</option>
+                <option value="LTL">LTL</option>
+            </select>
+        </div>
+        <div>
+            <button class="btn-primary" onclick="performSearch()" style="height: 40px; padding: 0 25px;">Tra Cứu</button>
+        </div>
+    </div>
+</div>
+
+<div id="basePriceBox" style="display: none; background: #e0f2fe; border: 1px solid #bae6fd; border-left: 5px solid #0284c7; padding: 20px; border-radius: 8px; margin-bottom: 24px; flex-shrink: 0;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h4 style="margin: 0 0 5px 0; color: #0369a1; font-size: 1.1rem;">Giá Cơ Sở Hiện Tại</h4>
+            <div style="color: #0f172a; font-size: 0.95rem;">
+                Tuyến đường đang tra cứu áp dụng từ ngày <strong id="bpDate"></strong>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: #0ea5e9;" id="bpValue"></div>
+            <div style="font-size: 0.85rem; color: #64748b;">Số khối: <span id="bpVolume"></span></div>
+        </div>
+    </div>
+</div>
+
+<div id="noBasePriceBox" style="display: none; background: #fffbeb; border: 1px solid #fef3c7; border-left: 5px solid #d97706; padding: 20px; border-radius: 8px; margin-bottom: 24px; flex-shrink: 0;">
+    <h4 style="margin: 0 0 5px 0; color: #b45309; font-size: 1.1rem;">Chưa có Giá Cơ Sở</h4>
+    <div style="color: #78350f; font-size: 0.95rem;">
+        Tuyến đường và loại xe này hiện chưa được thiết lập giá cơ sở trong hệ thống. Dưới đây là toàn bộ báo giá để bạn tham khảo.
+    </div>
+</div>
+
+<div class="glass-card" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+    <div style="flex: 1; overflow-y: auto;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead style="background: #f8fafc; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">
+            <tr>
+                <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Đối Tác (Nhà xe)</th>
+                <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Tuyến Đường</th>
+                <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Loại Xe / Thể tích</th>
+                <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Chi tiết Thùng</th>
+                <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Ghép hàng / Chiều đi</th>
+                <th class="text-right" style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; text-align: right;">Giá Thuê Báo (đ)</th>
+            </tr>
+        </thead>
+        <tbody id="resultsTableBody">
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">Vui lòng chọn tuyến đường và loại xe để tra cứu</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<script>
+    function formatMoney(amount) {
+        return new Intl.NumberFormat('vi-VN').format(amount);
+    }
+
+    function handleLoaiXeInput(input, targetId) {
+        const val = input.value.toString().toLowerCase().replace(/t$/, '').trim();
+        const map = {
+            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
+            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'ltl': 'LTL'
+        };
+        if (map[val] !== undefined) {
+            let target = $('#' + targetId);
+            if (target.val() !== map[val]) {
+                target.val(map[val]).trigger('change');
+            }
+        }
+    }
+
+    function handleSoKhoiInput(input, targetId) {
+        const val = input.value.toString().trim();
+        const map = {
+            '0-6': '1.25T', '7-10': '2T', '11-14': '3.5T', '15-18': '5T',
+            '19-28': '7T', '29-30': '9T', '31-35': '11T', '36-40': '15T', 'LTL': 'LTL'
+        };
+        if (map[val] !== undefined) {
+            let target = $('#' + targetId);
+            if (target.val() !== map[val]) {
+                target.val(map[val]).trigger('change');
+            }
+        }
+    }
+
+    async function performSearch() {
+        const tinh_nhan = document.getElementById('filterTinhNhan').value;
+        const huyen_nhan = document.getElementById('filterHuyenNhan').value;
+        const tinh_giao = document.getElementById('filterTinhGiao').value;
+        const huyen_giao = document.getElementById('filterHuyenGiao').value;
+        const loaixe = document.getElementById('filterLoaiXe').value;
+        const sokhoi = document.getElementById('filterKhoi').value;
+
+        const tbody = document.getElementById('resultsTableBody');
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">Đang tìm kiếm...</td></tr>`;
+        
+        document.getElementById('basePriceBox').style.display = 'none';
+        document.getElementById('noBasePriceBox').style.display = 'none';
+
+        const params = new URLSearchParams();
+        params.append('tinh_nhan', tinh_nhan);
+        params.append('tinh_giao', tinh_giao);
+        params.append('loai_xe', loaixe);
+        if (sokhoi) params.append('so_khoi', sokhoi);
+        if (huyen_nhan) params.append('huyen_nhan', huyen_nhan);
+        if (huyen_giao) params.append('huyen_giao', huyen_giao);
+
+        try {
+            const res = await fetch(`/api/search-prices/?${params.toString()}`);
+            const data = await res.json();
+            
+            if (!data.success) {
+                alert('Lỗi: ' + data.error);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: red;">${data.error}</td></tr>`;
+                return;
+            }
+
+            if (data.is_exact_search) {
+                if (data.base_price) {
+                    document.getElementById('basePriceBox').style.display = 'block';
+                    document.getElementById('bpValue').textContent = formatMoney(data.base_price.gia_co_so) + ' đ';
+                    document.getElementById('bpDate').textContent = data.base_price.ngay_ap_dung;
+                    document.getElementById('bpVolume').textContent = data.base_price.so_khoi;
+                } else {
+                    document.getElementById('noBasePriceBox').style.display = 'block';
+                }
+            }
+
+            if (data.results && data.results.length > 0) {
+                let html = '';
+                const today = new Date().toISOString().split('T')[0];
+                data.results.forEach(item => {
+                    let gcs_text = item.gia_co_so ? `GCS: ${formatMoney(item.gia_co_so)}đ` : 'Chưa có GCS';
+                    let isExpired = item.ngay_ket_thuc && item.ngay_ket_thuc < today;
+                    let priceColor = isExpired ? '#000000' : (item.gia_co_so && item.muc_gia > item.gia_co_so ? '#ef4444' : '#059669');
+                    let expiredBadge = isExpired ? `<br><span style="background: #000000; color: white; padding: 2px 4px; border-radius: 4px; font-size: 0.65rem;">Hết hiệu lực</span>` : '';
+                    html += `
+                        <tr style="border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" onclick="openRouteModal(${item.bg_id})">
+                            <td style="padding: 15px 20px;">
+                                <strong style="color: #1e293b;">${item.doi_tac_ten}</strong><br>
+                                <span style="color: #0284c7; font-weight: 600;">${item.doi_tac_sdt}</span>
+                            </td>
+                            <td style="padding: 15px 20px; color: #475569;">
+                                ${item.tuyen}
+                            </td>
+                            <td style="padding: 15px 20px;">
+                                <strong style="color: #0f172a;">${item.loai_xe}</strong> / ${item.so_khoi}
+                            </td>
+                            <td style="padding: 15px 20px; font-size: 0.9rem;">
+                                KT: ${item.kich_thuoc}<br>
+                                Loại: ${item.loai_thung}
+                            </td>
+                            <td style="padding: 15px 20px; font-size: 0.9rem;">
+                                Ghép: ${item.ghep_hang} <br>
+                                Chiều: ${item.chieu_di}
+                            </td>
+                            <td style="padding: 15px 20px; text-align: right;">
+                                <strong style="color: ${priceColor}; font-size: 1.1rem;"><span id="route-price-${item.bg_id}">${formatMoney(item.muc_gia)}</span> đ</strong>${expiredBadge}<br>
+                                <span style="font-size: 0.8rem; color: #94a3b8;">${gcs_text}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">Không tìm thấy báo giá nào phù hợp</td></tr>`;
+            }
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: red;">Có lỗi xảy ra khi tra cứu</td></tr>`;
+        }
+    }
+
+    let provincesData = [];
+    async function loadProvinces() {
+        try {
+            const res = await fetch('https://provinces.open-api.vn/api/?depth=2');
+            provincesData = await res.json();
+            
+            document.querySelectorAll('.province-select').forEach(sel => {
+                populateProvinceSelect(sel);
+            });
+        } catch (e) {
+            console.error("Lỗi API Tỉnh:", e);
+        }
+    }
+
+    function populateProvinceSelect(selectElement) {
+        let options = '<option value="">Tất cả</option>';
+        provincesData.forEach(p => {
+            let name = p.name.replace(/^(Tỉnh|Thành phố)\s+/i, '');
+            options += `<option value="${name}" data-code="${p.code}">${name}</option>`;
+        });
+        $(selectElement).html(options).trigger('change.select2');
+    }
+
+    function populateDistrictSelect(selectElement, provinceCode) {
+        let prov = provincesData.find(p => p.code == provinceCode);
+        let options = '<option value="">Tất cả</option>';
+        if (prov && prov.districts) {
+            prov.districts.forEach(d => {
+                let name = d.name.replace(/^(Huyện|Quận|Thị xã|Thành phố)\s+/i, '');
+                if (!isNaN(name) && d.name.toLowerCase().startsWith('quận')) {
+                    name = 'Quận ' + name;
+                }
+                options += `<option value="${name}">${name}</option>`;
+            });
+        }
+        $(selectElement).html(options).trigger('change.select2');
+    }
+
+    // Dùng jQuery on('change') cho tương thích Select2
+    $(document).on('change', '.province-select', function(e) {
+        let targetId = this.getAttribute('data-target');
+        let districtSelect = document.getElementById(targetId);
+        if (districtSelect) {
+            let selectedOption = $(this).find('option:selected');
+            let code = selectedOption.attr('data-code');
+            populateDistrictSelect(districtSelect, code);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        $('.province-select').select2({ width: '100%' });
+        $('.district-select').select2({ width: '100%' });
+        $('#filterLoaiXe').select2({ width: '100%' }).on('change', function() { handleLoaiXeInput(this, 'filterKhoi'); });
+        $('#filterKhoi').select2({ width: '100%' }).on('change', function() { handleSoKhoiInput(this, 'filterLoaiXe'); });
+        loadProvinces();
+    });
+</script>
+
+{% include 'core/route_modal.html' %}
+{% endblock %}

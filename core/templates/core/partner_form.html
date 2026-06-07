@@ -1,0 +1,804 @@
+    {% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .header-link {
+        display: inline-flex;
+        align-items: center;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+        transition: color 0.2s;
+    }
+    .header-link:hover { color: var(--primary-color); }
+    .header-link svg { width: 16px; height: 16px; margin-right: 5px; }
+    
+    .page-title {
+        font-size: 1.8rem;
+        color: var(--text-color);
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        padding-bottom: 15px;
+    }
+    
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    
+    .custom-table th {
+        padding: 10px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .custom-table td {
+        padding: 10px;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+    
+    .custom-table select.form-control, .custom-table input.form-control {
+        min-width: 100px;
+    }
+
+    .btn-save {
+        background: var(--primary-color);
+        color: white;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        font-size: 1rem;
+        transition: background 0.2s;
+    }
+    .btn-save:hover {
+        background: #0369a1;
+    }
+    .btn-save svg {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+    }
+    
+    .btn-icon {
+        color: var(--primary-color); 
+        background: none; 
+        border: none; 
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .btn-icon:hover {
+        background: rgba(2, 132, 199, 0.1);
+    }
+    .btn-delete-row {
+        color: #ef4444; 
+    }
+    .btn-delete-row:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+    
+    /* Modal styles */
+    .modal-overlay {
+        display: none; 
+        position: fixed; 
+        top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); 
+        z-index: 9999; 
+        align-items: center; 
+        justify-content: center;
+    }
+    .modal-box {
+        background: white; 
+        padding: 25px; 
+        border-radius: 12px; 
+        width: 500px; 
+        max-width: 90%;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .form-control-sm {
+        height: 40px !important;
+        background-color: white !important;
+    }
+</style>
+
+<form method="post" id="partner-form" novalidate style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+    {% csrf_token %}
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-shrink: 0;">
+        <div>
+            <a href="{% if partner %}/partners/{{ partner.pk }}/{% else %}/partners/{% endif %}" class="header-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Quay lại
+            </a>
+            <h1 class="page-title">{{ title }}</h1>
+        </div>
+        <div>
+            <button type="submit" class="btn-save">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Lưu dữ liệu
+            </button>
+        </div>
+    </div>
+
+    <!-- Inner scrollable wrapper -->
+    <div style="flex: 1; overflow-y: auto; padding-right: 10px; display: block;">
+        <div class="glass-card" style="margin-bottom: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px 25px;">
+            {% for field in form %}
+            <div class="form-group">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div style="color: #ef4444; font-size: 0.85rem; margin-top: 5px;">
+                    {{ field.errors }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-bottom: 30px;" id="add-route-toggle-container">
+        <button type="button" class="btn-primary" onclick="showFormsetSection()" style="padding: 12px 24px; font-size: 1rem;">
+            <svg style="width:18px; height:18px; margin-right:8px; vertical-align:middle; display:inline-block;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Thêm tuyến đầu tiên cho đối tác này
+        </button>
+    </div>
+
+    <div class="glass-card" id="route-formset-section" style="display: none; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h3 style="margin-top: 0; margin-bottom: 5px; color: var(--text-color); font-size: 1.2rem;">Tuyến xe & Báo giá</h3>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Thông tin cơ bản của các tuyến đường vận tải</p>
+            </div>
+            <div>
+                <button type="button" class="btn-secondary" onclick="addFormsetRow()" style="padding: 8px 16px; font-size: 0.9rem; background: white; border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <span style="font-weight: 500; font-size: 1.1rem; margin-right: 4px; display: inline-block; vertical-align: text-bottom;">+</span> Thêm tuyến mới
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="custom-table" id="formset-table">
+                <thead style="background: rgba(0,0,0,0.02);">
+                    <tr>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Mã Tuyến</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Tuyến Đường</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Tải trọng (Tấn)</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Số khối</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Kích thước (DxRxC)</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Loại thùng</th>
+                                                <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Đơn giá (đ)</th>
+                        <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in routes %}
+                    <tr style="border-top: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 15px 20px; font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="openRouteModal({{ r.id }})" title="Click để xem chi tiết tuyến">
+                            BG-{{ r.id }}
+                            <input type="hidden" name="bg_id[]" value="{{ r.id }}">
+                        </td>
+                        <td style="padding: 15px 20px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 8px; height: 8px; border: 1.5px solid var(--text-muted); border-radius: 50%; background: transparent;"></span>
+                                {{ r.tuyen.huyen_nhan }}, {{ r.tuyen.tinh_nhan }} 
+                                <span style="color:var(--text-muted); margin:0 4px;">→</span> 
+                                {{ r.tuyen.huyen_giao }}, {{ r.tuyen.tinh_giao }}
+                            </div>
+                        </td>
+                        <td style="padding: 15px 20px;">{{ r.tai_trong_tan }}</td>
+                        <td style="padding: 15px 20px;">{{ r.so_khoi|default:"-" }}</td>
+                        <td style="padding: 15px 20px;">{{ r.kich_thuoc|default:"-" }}</td>
+                        <td style="padding: 15px 20px;">{{ r.loai_thung|default:"-" }}</td>
+                        <td class="text-right" style="padding: 15px 20px; font-weight: 700; {% if r.gia_co_so_val and not r.trong_gia %}color: #ef4444;{% elif r.gia_co_so_val and r.trong_gia %}color: #10b981;{% endif %}">{{ r.muc_gia_chap_nhan|floatformat:"0g" }}đ</td>
+                        <td style="padding: 15px 20px;">
+                            <button type="button" class="btn-icon btn-delete-row" onclick="deleteRoute({{ r.id }}, this)" title="Xóa tuyến này" style="color: #ef4444; background: none; border: none; cursor: pointer;">
+                                <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr id="no-routes-row">
+                        <td colspan="7" style="padding: 30px; text-align: center; color: var(--text-muted);">Chưa có tuyến nào.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="new-routes-container"></div>
+        
+        <!-- Nút thêm tuyến mới -->
+        <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed var(--border-color);">
+            <button type="button" class="btn-secondary" onclick="addFormsetRow()" style="padding: 8px 24px; font-size: 0.9rem; background: white; border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <span style="font-weight: 500; font-size: 1.1rem; margin-right: 4px; display: inline-block; vertical-align: text-bottom;">+</span> Thêm tuyến mới
+            </button>
+        </div>
+    </div> <!-- End form inner wrapper -->
+</form>
+
+    <!-- Template HTML cho dòng mới -->
+    <div id="empty-form-template" style="display: none;">
+        <div class="route-block glass-card" style="margin-top: 15px; border: 1px solid #e0f2fe; border-top: 3px solid #38bdf8; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;">
+                <h4 style="margin: 0; color: #0284c7; font-weight: 600;">Tuyến mới</h4>
+                <button type="button" class="btn-icon" onclick="this.closest('.route-block').remove()" style="color: #ef4444; font-size: 0.9rem;">Xóa</button>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <h5 style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">HÀNH TRÌNH (ROUTE)</h5>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tỉnh/Thành phố nhận</label>
+                        <select class="form-control form-control-sm province-select" name="tinh_nhan[]" required><option value="">Chọn Tỉnh</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Quận/Huyện nhận</label>
+                        <select class="form-control form-control-sm district-select" name="huyen_nhan[]" required><option value="">Chọn huyện</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tỉnh/Thành phố giao</label>
+                        <select class="form-control form-control-sm province-select" name="tinh_giao[]" required><option value="">Chọn Tỉnh</option></select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Quận/Huyện giao</label>
+                        <select class="form-control form-control-sm district-select" name="huyen_giao[]" required><option value="">Chọn huyện</option></select>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <h5 style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">THÔNG SỐ PHƯƠNG TIỆN & HÀNG HÓA</h5>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tải trọng (Tấn)</label>
+                        <select name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-select" required>
+                            <option value="">Chọn tải trọng</option>
+                            <option value="1.25">1.25 Tấn</option>
+                            <option value="2">2 Tấn</option>
+                            <option value="3.5">3.5 Tấn</option>
+                            <option value="5">5 Tấn</option>
+                            <option value="7">7 Tấn</option>
+                            <option value="9">9 Tấn</option>
+                            <option value="11">11 Tấn</option>
+                            <option value="15">15 Tấn</option>
+                            <option value="LTL">LTL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Số khối</label>
+                        <select name="so_khoi[]" class="form-control form-control-sm so-khoi-select" required>
+                            <option value="">Chọn số khối</option>
+                            <option value="0-6">0-6</option>
+                            <option value="7-10">7-10</option>
+                            <option value="11-14">11-14</option>
+                            <option value="15-18">15-18</option>
+                            <option value="19-28">19-28</option>
+                            <option value="29-30">29-30</option>
+                            <option value="31-35">31-35</option>
+                            <option value="36-40">36-40</option>
+                            <option value="LTL">LTL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Kích thước (DxRxC)</label>
+                        <input type="text" name="kich_thuoc[]" class="form-control form-control-sm">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Loại thùng</label>
+                        <select name="loai_thung[]" class="form-control form-control-sm">
+                            <option value="Thùng bạt">Thùng bạt</option>
+                            <option value="Thùng kín">Thùng kín</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; border: 1px solid #f1f5f9;">
+                <h5 style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">CHI TIẾT VẬN HÀNH & GIÁ</h5>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Ghép hàng?</label>
+                        <select name="co_ghep_hang_khong[]" class="form-control form-control-sm"><option value="1">Có</option><option value="0" selected>Không</option></select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Chịu quá tải?</label>
+                        <select name="co_chiu_qua_tai_khong[]" class="form-control form-control-sm"><option value="1">Có</option><option value="0" selected>Không</option></select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Đi nhiều điểm?</label>
+                        <select name="co_di_nhieu_diem_khong[]" class="form-control form-control-sm"><option value="1">Có</option><option value="0" selected>Không</option></select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Số chiều đi</label>
+                        <input type="number" name="di_1_hay_2_chieu[]" class="form-control form-control-sm" value="1" min="1" max="2">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Đơn giá (đ)</label>
+                        <input type="text" name="muc_gia_chap_nhan[]" class="form-control form-control-sm vn-number text-right" required>
+                        <div class="gcs-display" style="font-size: 0.75rem; color: #64748b; margin-top: 5px; min-height: 15px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let provincesData = [];
+    
+    function syncKhongTrongFormset(selectElement, type) {
+        let block = selectElement.closest('.route-block');
+        let taiTrongSel = block.querySelector('.tai-trong-select');
+        let soKhoiSel = block.querySelector('.so-khoi-select');
+        
+        const mapping = {
+            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
+            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'LTL': 'LTL'
+        };
+        const revMapping = {
+            '0-6': '1.25', '7-10': '2', '11-14': '3.5', '15-18': '5',
+            '19-28': '7', '29-30': '9', '31-35': '11', '36-40': '15', 'LTL': 'LTL'
+        };
+        
+        let val = selectElement.value;
+        if (!val) return;
+        
+        if (type === 'tan') {
+            if (mapping[val] && $(soKhoiSel).val() !== mapping[val]) {
+                $(soKhoiSel).val(mapping[val]).trigger('change.select2');
+            }
+        } else {
+            if (revMapping[val] && $(taiTrongSel).val() !== revMapping[val]) {
+                $(taiTrongSel).val(revMapping[val]).trigger('change.select2');
+            }
+        }
+    }
+    
+    $(document).on('change', '.tai-trong-select', function() {
+        syncKhongTrongFormset(this, 'tan');
+    });
+    $(document).on('change', '.so-khoi-select', function() {
+        syncKhongTrongFormset(this, 'khoi');
+    });
+    
+    function toggleAdvancedRow(el) {
+        let block = el.closest('tbody');
+        let advRow = block.querySelector('.advanced-row');
+        if (advRow) {
+            advRow.style.display = (advRow.style.display === 'none') ? 'table-row' : 'none';
+        }
+    }
+    
+    // API Logic
+    async function loadProvinces() {
+        try {
+            const res = await fetch('https://provinces.open-api.vn/api/?depth=2');
+            provincesData = await res.json();
+            
+            document.querySelectorAll('.province-select').forEach(sel => {
+                if (!sel.closest('#empty-form-template')) {
+                    populateProvinceSelect(sel);
+                }
+            });
+        } catch (e) {
+            console.error("Lỗi API Tỉnh:", e);
+        }
+    }
+
+    function populateProvinceSelect(selectElement) {
+        let selectedVal = selectElement.getAttribute('data-selected') || '';
+        let options = '<option value="">Chọn Tỉnh</option>';
+        provincesData.forEach(p => {
+            let name = p.name.replace(/^(Tỉnh|Thành phố)\s+/i, '');
+            let sel = (name === selectedVal || p.name === selectedVal) ? 'selected' : '';
+            options += `<option value="${name}" data-code="${p.code}" ${sel}>${name}</option>`;
+        });
+        $(selectElement).html(options).trigger('change.select2');
+        if (!$(selectElement).data('select2')) {
+            $(selectElement).select2({ width: '100%' });
+        }
+        
+        if (selectedVal) {
+            let code = provincesData.find(x => x.name === selectedVal || x.name.replace(/^(Tỉnh|Thành phố)\s+/i, '') === selectedVal)?.code;
+            if (code) {
+                let block = selectElement.closest('.route-block');
+                let isNhan = selectElement.name === 'tinh_nhan[]';
+                let districtSelect = isNhan ? block.querySelector('select[name="huyen_nhan[]"]') : block.querySelector('select[name="huyen_giao[]"]');
+                populateDistrictSelect(districtSelect, code);
+            }
+        }
+    }
+
+    function populateDistrictSelect(selectElement, provinceCode) {
+        let prov = provincesData.find(p => p.code == provinceCode);
+        let selectedVal = selectElement.getAttribute('data-selected') || '';
+        let options = '<option value="">Chọn Huyện</option>';
+        if (prov && prov.districts) {
+            prov.districts.forEach(d => {
+                let name = d.name.replace(/^(Huyện|Quận|Thị xã|Thành phố)\s+/i, '');
+                if (!isNaN(name) && d.name.toLowerCase().startsWith('quận')) {
+                    name = 'Quận ' + name;
+                }
+                let sel = (name === selectedVal || d.name === selectedVal) ? 'selected' : '';
+                options += `<option value="${name}" ${sel}>${name}</option>`;
+            });
+        }
+        $(selectElement).html(options).trigger('change.select2');
+        if (!$(selectElement).data('select2')) {
+            $(selectElement).select2({ width: '100%' });
+        }
+    }
+
+    async function fetchBasePriceForFormset(block) {
+        let tn = block.querySelector('select[name="tinh_nhan[]"]')?.value;
+        let tg = block.querySelector('select[name="tinh_giao[]"]')?.value;
+        let lxVal = block.querySelector('select[name="tai_trong_tan[]"]')?.value;
+        let gcsDisplay = block.querySelector('.gcs-display');
+        
+        if (!tn || !tg || !lxVal) {
+            if (gcsDisplay) gcsDisplay.innerHTML = '';
+            return;
+        }
+        
+        let lxStr = lxVal + 'T';
+        if (!lxVal.includes('.')) {
+            lxStr = parseInt(lxVal) + 'T';
+        } else if (lxVal === '1.25') {
+            lxStr = '1.25T';
+        } else {
+            lxStr = parseFloat(lxVal) + 'T';
+        }
+        
+        try {
+            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lxStr)}`);
+            const data = await res.json();
+            if (data.success && data.gia_co_so) {
+                gcsDisplay.innerHTML = `<span style="color:#0284c7; font-weight:600;" data-gcs="${data.gia_co_so}">GCS: ${Number(data.gia_co_so).toLocaleString('vi-VN')} đ</span>`;
+            } else {
+                gcsDisplay.innerHTML = '<span style="color:#94a3b8;" data-gcs="">Chưa có GCS</span>';
+            }
+            updatePriceColor(block);
+        } catch(e) {}
+    }
+
+    function updatePriceColor(block) {
+        let priceInput = block.querySelector('input[name="muc_gia_chap_nhan[]"]');
+        let gcsSpan = block.querySelector('.gcs-display span');
+        if (!priceInput || !gcsSpan) return;
+        
+        let gcsVal = gcsSpan.getAttribute('data-gcs');
+        if (gcsVal) {
+            let priceStr = priceInput.value.replace(/\./g, '').replace(',', '.');
+            let price = parseFloat(priceStr) || 0;
+            let gcs = parseFloat(gcsVal);
+            if (price > gcs) {
+                priceInput.style.color = '#ef4444';
+                priceInput.style.fontWeight = 'bold';
+            } else {
+                priceInput.style.color = '#059669';
+                priceInput.style.fontWeight = 'bold';
+            }
+        } else {
+            priceInput.style.color = '';
+            priceInput.style.fontWeight = '';
+        }
+    }
+
+    $(document).on('input', 'input[name="muc_gia_chap_nhan[]"]', function(e) {
+        let block = e.target.closest('.route-block');
+        if (block) updatePriceColor(block);
+    });
+
+    // Cần dùng jQuery for event delegation cho select2 thay vì native event nếu user tương tác qua select2
+    $(document).on('change', '.province-select', function(e) {
+        let block = e.target.closest('.route-block');
+        let isNhan = e.target.name === 'tinh_nhan[]';
+        let districtSelect = isNhan ? block.querySelector('select[name="huyen_nhan[]"]') : block.querySelector('select[name="huyen_giao[]"]');
+        let opt = e.target.options[e.target.selectedIndex];
+        let code = opt.getAttribute('data-code');
+        districtSelect.setAttribute('data-selected', '');
+        populateDistrictSelect(districtSelect, code);
+    });
+
+    $(document).on('change', 'select', function(e) {
+        if (['tinh_nhan[]', 'tinh_giao[]', 'tai_trong_tan[]', 'so_khoi[]'].includes(e.target.name)) {
+            let block = e.target.closest('.route-block');
+            if (block) fetchBasePriceForFormset(block);
+        }
+    });
+
+    function showFormsetSection() {
+        document.getElementById('route-formset-section').style.display = 'block';
+        document.getElementById('add-route-toggle-container').style.display = 'none';
+        
+        // Thêm tuyến đầu tiên
+        addFormsetRow();
+        
+        // Không tự động cuộn trang
+        // document.getElementById('route-formset-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    async function deleteRoute(routeId, btn) {
+        event.stopPropagation();
+        const result = await Swal.fire({
+            title: 'Xóa tuyến đường?',
+            text: 'Bạn có chắc chắn muốn xóa tuyến này khỏi cơ sở dữ liệu?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Xóa!',
+            cancelButtonText: 'Không'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/api/routes/${routeId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Đã xóa!',
+                        text: 'Tuyến đường đã được xóa.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        btn.closest('tr').remove();
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+            }
+        }
+    }
+
+    function addFormsetRow() {
+        var emptyFormHtml = document.getElementById('empty-form-template').querySelector('.route-block').outerHTML;
+        document.querySelector('#new-routes-container').insertAdjacentHTML('beforeend', emptyFormHtml);
+        
+        var newBlock = document.querySelector('#new-routes-container').lastElementChild;
+        
+        // Ẩn dòng "Chưa có tuyến nào" nếu có
+        var noRoutesRow = document.getElementById('no-routes-row');
+        if (noRoutesRow) {
+            noRoutesRow.style.display = 'none';
+        }
+        
+        if (provincesData.length > 0) {
+            newBlock.querySelectorAll('.province-select').forEach(sel => {
+                populateProvinceSelect(sel);
+            });
+        }
+        
+        $(newBlock).find('.district-select').each(function() {
+            if (!$(this).data('select2')) {
+                $(this).select2({ width: '100%' });
+            }
+        });
+        
+        // Không tự động cuộn trang để tránh làm thanh cuộn bị chạy
+        // newBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.addEventListener("DOMContentLoaded", async function() {
+        await loadProvinces();
+        
+        var existingRows = {{ routes|length|default:0 }};
+        var errors = document.querySelector('.errorlist');
+        var urlParams = new URLSearchParams(window.location.search);
+        var shouldAddRoute = urlParams.get('add_route') === '1';
+        
+        var newRoutesData = {{ new_routes_data_json|safe|default:"[]" }};
+        
+        // Hiển thị nút thêm tuyến đầu tiên cho đối tác mới (không có tuyến)
+        if (existingRows === 0 && !errors && !shouldAddRoute && newRoutesData.length === 0) {
+            document.getElementById('add-route-toggle-container').style.display = 'block';
+        }
+        
+        // Khôi phục dữ liệu tuyến mới nếu có lỗi
+        if (newRoutesData.length > 0) {
+            document.getElementById('route-formset-section').style.display = 'block';
+            document.getElementById('add-route-toggle-container').style.display = 'none';
+            
+            newRoutesData.forEach(route => {
+                addFormsetRow();
+                var newBlock = document.querySelector('#new-routes-container').lastElementChild;
+                
+                $(newBlock).find('select[name="tinh_nhan[]"]').attr('data-selected', route.tinh_nhan);
+                $(newBlock).find('select[name="huyen_nhan[]"]').attr('data-selected', route.huyen_nhan);
+                $(newBlock).find('select[name="tinh_giao[]"]').attr('data-selected', route.tinh_giao);
+                $(newBlock).find('select[name="huyen_giao[]"]').attr('data-selected', route.huyen_giao);
+                
+                populateProvinceSelect($(newBlock).find('select[name="tinh_nhan[]"]')[0]);
+                populateProvinceSelect($(newBlock).find('select[name="tinh_giao[]"]')[0]);
+                
+                $(newBlock).find('select[name="tai_trong_tan[]"]').val(route.tai_trong_tan).trigger('change');
+                $(newBlock).find('select[name="so_khoi[]"]').val(route.so_khoi).trigger('change');
+                $(newBlock).find('input[name="kich_thuoc[]"]').val(route.kich_thuoc);
+                $(newBlock).find('select[name="loai_thung[]"]').val(route.loai_thung).trigger('change');
+                $(newBlock).find('input[name="muc_gia_chap_nhan[]"]').val(route.muc_gia_chap_nhan);
+                
+                $(newBlock).find('select[name="co_ghep_hang_khong[]"]').val(route.co_ghep_hang_khong);
+                $(newBlock).find('select[name="co_chiu_qua_tai_khong[]"]').val(route.co_chiu_qua_tai_khong);
+                $(newBlock).find('select[name="co_di_nhieu_diem_khong[]"]').val(route.co_di_nhieu_diem_khong);
+                $(newBlock).find('input[name="di_1_hay_2_chieu[]"]').val(route.di_1_hay_2_chieu);
+            });
+        }
+        
+        // Nếu có tuyến hoặc có lỗi hoặc được yêu cầu thêm tuyến
+        if (existingRows > 0 || errors || shouldAddRoute) {
+            document.getElementById('route-formset-section').style.display = 'block';
+            document.getElementById('add-route-toggle-container').style.display = 'none';
+            
+            if (shouldAddRoute && newRoutesData.length === 0) {
+                // Thêm form tuyến mới
+                setTimeout(() => {
+                    addFormsetRow();
+                }, 100);
+            }
+        }
+
+        document.getElementById('partner-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Validate required fields
+            let isValid = true;
+            document.querySelectorAll('.error-note').forEach(el => el.remove());
+            document.querySelectorAll('.form-control.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            
+            this.querySelectorAll('[required]').forEach(input => {
+                if (input.closest('#empty-form-template')) return;
+                if (input.offsetWidth === 0 && input.offsetHeight === 0) return; // Skip hidden elements
+                
+                if (!input.value.trim() && input.closest('tr') !== document.getElementById('no-routes-row')) {
+                    isValid = false;
+                    input.classList.add('is-invalid');
+                    
+                    let note = document.createElement('div');
+                    note.className = 'error-note';
+                    note.style.color = '#ef4444';
+                    note.style.fontSize = '0.75rem';
+                    note.style.marginTop = '4px';
+                    note.style.fontWeight = '500';
+                    note.innerText = 'Trường này không được để trống';
+                    
+                    if ($(input).hasClass('select2-hidden-accessible')) {
+                        $(input).next('.select2-container').after(note);
+                        $(input).next('.select2-container').find('.select2-selection').addClass('is-invalid');
+                    } else {
+                        input.parentNode.appendChild(note);
+                    }
+                }
+            });
+            
+            if (!isValid) {
+                Swal.fire({
+                    title: 'Thiếu thông tin!',
+                    text: 'Vui lòng điền đầy đủ các trường bắt buộc được đánh dấu đỏ.',
+                    icon: 'warning',
+                    confirmButtonColor: '#0ea5e9'
+                }).then(() => {
+                    const firstError = document.querySelector('.error-note');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+                return;
+            }
+            
+            // Check for duplicate routes first
+            const newRoutes = [];
+            document.querySelectorAll('#new-routes-container .route-block').forEach(block => {
+                const bgIdInput = block.querySelector('input[name="bg_id[]"]');
+                if (!bgIdInput || !bgIdInput.value) { // New route
+                    const routeData = {
+                        tinh_nhan: block.querySelector('select[name="tinh_nhan[]"]').value,
+                        huyen_nhan: block.querySelector('select[name="huyen_nhan[]"]').value,
+                        tinh_giao: block.querySelector('select[name="tinh_giao[]"]').value,
+                        huyen_giao: block.querySelector('select[name="huyen_giao[]"]').value,
+                        tai_trong_tan: block.querySelector('select[name="tai_trong_tan[]"]').value,
+                        so_khoi: block.querySelector('select[name="so_khoi[]"]').value,
+                        kich_thuoc: block.querySelector('input[name="kich_thuoc[]"]').value,
+                        loai_thung: block.querySelector('select[name="loai_thung[]"]').value,
+                        co_ghep_hang_khong: block.querySelector('select[name="co_ghep_hang_khong[]"]').value,
+                        co_chiu_qua_tai_khong: block.querySelector('select[name="co_chiu_qua_tai_khong[]"]').value,
+                        co_di_nhieu_diem_khong: block.querySelector('select[name="co_di_nhieu_diem_khong[]"]').value,
+                        di_1_hay_2_chieu: block.querySelector('input[name="di_1_hay_2_chieu[]"]').value
+                    };
+                    // Only add if at least provinces are filled
+                    if (routeData.tinh_nhan && routeData.tinh_giao) {
+                        newRoutes.push(routeData);
+                    }
+                }
+            });
+            
+            let hasDuplicate = false;
+            let duplicateMsg = '';
+            let duplicateId = null;
+            
+            const partnerId = "{{ form.instance.pk|default:'' }}";
+            
+            if (newRoutes.length > 0 && partnerId) {
+                try {
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                    const response = await fetch('/api/check-duplicate-partner-routes/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ partner_id: partnerId, new_routes: newRoutes })
+                    });
+                    const data = await response.json();
+                    if (data.success && data.has_duplicate) {
+                        hasDuplicate = true;
+                        duplicateMsg = data.error;
+                        duplicateId = data.duplicate_route_id;
+                    }
+                } catch (err) {
+                    console.error("Duplicate check error:", err);
+                }
+            }
+            
+            if (hasDuplicate) {
+                Swal.fire({
+                    title: 'Tuyến xe đã tồn tại',
+                    text: duplicateMsg,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Xem chi tiết',
+                    cancelButtonText: 'Đóng',
+                    confirmButtonColor: '#0284c7'
+                }).then((result) => {
+                    if (result.isConfirmed && typeof openRouteModal === 'function') {
+                        openRouteModal(duplicateId);
+                    }
+                });
+                return; // Stop submission
+            }
+
+            const result = await Swal.fire({
+                title: 'Lưu dữ liệu?',
+                text: 'Bạn có chắc chắn muốn lưu các thay đổi này?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0ea5e9',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Có, Lưu!',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (result.isConfirmed) {
+                HTMLFormElement.prototype.submit.call(this);
+            }
+        });
+    });
+</script>
+{% include 'core/route_modal.html' %}
+{% endblock %}
