@@ -1,3 +1,5 @@
+import json
+from django.http import JsonResponse
 import time
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
@@ -203,8 +205,6 @@ def partner_create(request):
                     'co_di_nhieu_diem_khong': nhieu_diems[i] if i < len(nhieu_diems) else '0',
                     'di_1_hay_2_chieu': chieu_dis[i] if i < len(chieu_dis) else '1'
                 })
-            
-            import json
             return render(request, 'core/partner_form.html', {'form': form, 'title': 'Thêm Đối Tác Mới', 'routes': [], 'new_routes_data_json': json.dumps(new_routes_data)})
             
     else:
@@ -212,7 +212,7 @@ def partner_create(request):
         initial_data = {}
         if request.user.is_authenticated:
             initial_data['nguoi_quan_ly'] = request.user.username
-        form = DoiTacForm(initial=initial_data)
+        form = DoiTacForm(initial=initial_data, user=request.user)
     return render(request, 'core/partner_form.html', {'form': form, 'title': 'Thêm Đối Tác Mới', 'routes': []})
 
 @login_required
@@ -330,7 +330,6 @@ def partner_update(request, pk):
                     r.trong_gia = False
                     
             today = timezone.now().date()
-            import json
             return render(request, 'core/partner_form.html', {'form': form, 'title': 'Chỉnh Sửa Đối Tác', 'partner': partner, 'routes': routes, 'today': today, 'new_routes_data_json': json.dumps(new_routes_data)})
 
     else:
@@ -431,8 +430,6 @@ def partner_add_route(request, pk):
     if count > 0:
         messages.success(request, f'Đã thêm {count} tuyến thành công!')
     return redirect('partner_detail', pk=pk)
-
-from django.http import JsonResponse
 import json
 
 @login_required
@@ -565,7 +562,6 @@ def base_price_list(request):
 def api_get_base_prices(request):
 
     if not request.user.has_perm('core.view_giacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     try:
         tinh_nhan = request.GET.get('tinh_nhan', '')
@@ -851,7 +847,6 @@ def api_base_price_detail(request, pk):
 def api_save_base_price(request):
 
     if not request.user.has_perm('core.add_giacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền thêm giá cơ sở'})
@@ -930,7 +925,6 @@ def api_save_base_price(request):
 def api_update_base_price(request, pk):
 
     if not request.user.has_perm('core.change_giacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền chỉnh sửa giá cơ sở'})
@@ -1092,7 +1086,6 @@ def proposal_list_view(request):
 def api_create_proposal(request):
 
     if not request.user.has_perm('core.add_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -1143,7 +1136,6 @@ def api_create_proposal(request):
 def api_approve_proposal(request, pk):
 
     if not request.user.has_perm('core.change_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
@@ -1165,7 +1157,6 @@ def api_approve_proposal(request, pk):
 def api_reject_proposal(request, pk):
 
     if not request.user.has_perm('core.change_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
@@ -1180,6 +1171,93 @@ def api_reject_proposal(request, pk):
         proposal.save()
         
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_update_proposal(request, pk):
+    try:
+        data = json.loads(request.body)
+        proposal = DeXuatGiaCoSo.objects.get(pk=pk)
+        
+        if proposal.nguoi_de_xuat != request.user.username:
+            return JsonResponse({'success': False, 'error': 'Bạn không có quyền sửa đề xuất này'})
+            
+        if proposal.trang_thai != 'ChoDuyet':
+            return JsonResponse({'success': False, 'error': 'Chỉ có thể sửa đề xuất đang chờ duyệt'})
+            
+        tinh_nhan = data.get('tinh_nhan', '').strip()
+        huyen_nhan = data.get('huyen_nhan', '').strip()
+        tinh_giao = data.get('tinh_giao', '').strip()
+        huyen_giao = data.get('huyen_giao', '').strip()
+        loai_xe = data.get('loai_xe', '').strip()
+        so_khoi = data.get('so_khoi', '').strip()
+        
+        if tinh_nhan and tinh_giao and loai_xe:
+            prefixes_tinh = ["Tỉnh ", "Thành phố "]
+            for p in prefixes_tinh:
+                if tinh_nhan.startswith(p): tinh_nhan = tinh_nhan[len(p):]
+                if tinh_giao.startswith(p): tinh_giao = tinh_giao[len(p):]
+                
+            huyen_nhan = clean_huyen(huyen_nhan)
+            huyen_giao = clean_huyen(huyen_giao)
+            
+            tuyen, created = TuyenXe.objects.get_or_create(
+                tinh_nhan=tinh_nhan, huyen_nhan=huyen_nhan, tinh_giao=tinh_giao, huyen_giao=huyen_giao,
+                defaults={'ma_tuyen': f"T-DX-{int(time.time())}"}
+            )
+            
+            gcs = GiaCoSo.objects.filter(tuyen=tuyen, loai_xe=loai_xe).first()
+            proposal.tuyen = tuyen
+            proposal.loai_xe = loai_xe
+            proposal.so_khoi = so_khoi
+            proposal.gia_hien_tai = gcs.gia_co_so if gcs else None
+            
+        if 'gia_de_xuat' in data:
+            gia_de_xuat_clean = str(data['gia_de_xuat']).replace(',', '').replace(' ', '')
+            proposal.gia_de_xuat = parse_vn_number(gia_de_xuat_clean)
+        if 'ly_do' in data:
+            proposal.ly_do_de_xuat = data['ly_do']
+            
+        proposal.save()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_delete_proposal(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+        
+    try:
+        proposal = DeXuatGiaCoSo.objects.get(pk=pk)
+        
+        if proposal.nguoi_de_xuat != request.user.username:
+            return JsonResponse({'success': False, 'error': 'Bạn không có quyền xóa đề xuất này'})
+            
+        if proposal.trang_thai != 'ChoDuyet':
+            return JsonResponse({'success': False, 'error': 'Chỉ có thể xóa đề xuất đang chờ duyệt'})
+            
+        proposal.delete()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_undo_proposal(request, pk):
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+        
+    try:
+        proposal = DeXuatGiaCoSo.objects.get(pk=pk)
+        if proposal.can_undo:
+            proposal.trang_thai = 'ChoDuyet'
+            proposal.save()
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Đề xuất này không thể hoàn tác (đã quá 5 phút hoặc chưa được xử lý)'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -1206,7 +1284,6 @@ def api_get_base_price(request):
 def api_delete_partner(request, pk):
 
     if not request.user.has_perm('core.delete_doitac'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
@@ -2099,7 +2176,6 @@ def proposal_list_view(request):
 def api_create_proposal(request):
 
     if not request.user.has_perm('core.add_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -2150,7 +2226,6 @@ def api_create_proposal(request):
 def api_approve_proposal(request, pk):
 
     if not request.user.has_perm('core.change_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
@@ -2172,7 +2247,6 @@ def api_approve_proposal(request, pk):
 def api_reject_proposal(request, pk):
 
     if not request.user.has_perm('core.change_dexuatgiacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
@@ -2213,7 +2287,6 @@ def api_get_base_price(request):
 def api_delete_partner(request, pk):
 
     if not request.user.has_perm('core.delete_doitac'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
@@ -2227,7 +2300,6 @@ def api_delete_partner(request, pk):
 def api_delete_base_price(request, pk):
 
     if not request.user.has_perm('core.delete_giacoso'):
-        from django.http import JsonResponse
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
@@ -2378,7 +2450,6 @@ def api_download_base_price_template(request):
     try:
         import openpyxl
         import urllib.request
-        import json
         from openpyxl.worksheet.datavalidation import DataValidation
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter

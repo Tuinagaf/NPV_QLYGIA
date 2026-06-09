@@ -178,4 +178,10 @@ class DeXuatGiaCoSo(models.Model):
     def __str__(self):
         return f"Đề xuất {self.tuyen} - {self.loai_xe} - {self.trang_thai}"
 
+    @property
+    def can_undo(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        return self.trang_thai in ['DaDuyet', 'TuChoi'] and (timezone.now() - self.ngay_cap_nhat) <= timedelta(minutes=5)
+
 # Add to models

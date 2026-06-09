@@ -233,6 +233,7 @@
             </button>
         </div>
     </div> <!-- End form inner wrapper -->
+    </div> <!-- End flex: 1 wrapper -->
 </form>
 
     <!-- Template HTML cho dòng mới -->
@@ -651,8 +652,8 @@
             });
         }
         
-        // Nếu có tuyến hoặc có lỗi hoặc được yêu cầu thêm tuyến
-        if (existingRows > 0 || errors || shouldAddRoute) {
+        // Nếu có tuyến hoặc được yêu cầu thêm tuyến
+        if (existingRows > 0 || newRoutesData.length > 0 || shouldAddRoute) {
             document.getElementById('route-formset-section').style.display = 'block';
             document.getElementById('add-route-toggle-container').style.display = 'none';
             

@@ -82,7 +82,7 @@ class DoiTacForm(forms.ModelForm):
                         self.initial[field] = str(val)
         if self.user and self.user.is_superuser:
             from django.contrib.auth.models import User
-            users = User.objects.filter(is_superuser=False).values_list('username', 'username')
+            users = User.objects.all().values_list('username', 'username')
             choices = [('', '--- Chọn Người Quản Lý ---')] + list(users)
             self.fields['nguoi_quan_ly'].widget = forms.Select(choices=choices, attrs={'class': 'form-control', 'required': 'required'})
             self.fields['nguoi_quan_ly'].required = True
@@ -118,6 +118,17 @@ class DoiTacForm(forms.ModelForm):
             # MST Việt Nam có 10 hoặc 13 số
             if not re.match(r'^\d{10}(\d{3})?$', ma_so_thue):
                 raise ValidationError('Mã số thuế không hợp lệ. Phải có 10 hoặc 13 chữ số.')
+                
+            # Kiểm tra trùng lặp
+            existing = DoiTac.objects.filter(ma_so_thue=ma_so_thue)
+            if self.instance and self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+                
+            if existing.exists():
+                partner = existing.first()
+                manager = partner.nguoi_quan_ly or 'Hệ thống (Admin)'
+                raise ValidationError(f'Mã số thuế này đã tồn tại trong hệ thống. Đối tác này đang được phụ trách bởi: {manager}')
+                
         return ma_so_thue
     
     def clean_phi_rot_diem(self):

@@ -47,10 +47,7 @@
                 <th>Lý do & Người ĐX</th>
                 <th>Ngày tạo</th>
                 <th>Trạng thái</th>
-                {% if user.is_superuser %}
                 <th style="text-align: right;">Thao tác</th>
-                {% endif %}
-            </tr>
         </thead>
         <tbody>
             {% for p in proposals %}
@@ -75,14 +72,20 @@
                         {% else %}Từ chối{% endif %}
                     </span>
                 </td>
-                {% if user.is_superuser %}
                 <td style="text-align: right;">
                     {% if p.trang_thai == 'ChoDuyet' %}
-                    <button class="btn-action btn-approve" onclick="approveProposal({{ p.id }})">Duyệt</button>
-                    <button class="btn-action btn-reject" onclick="rejectProposal({{ p.id }})" style="margin-left: 5px;">Từ chối</button>
+                        {% if user.is_superuser %}
+                        <button class="btn-action btn-approve" onclick="approveProposal({{ p.id }})">Duyệt</button>
+                        <button class="btn-action btn-reject" onclick="rejectProposal({{ p.id }})" style="margin-left: 5px;">Từ chối</button>
+                        {% endif %}
+                        {% if p.nguoi_de_xuat == user.username %}
+                        <button class="btn-action" style="background: #3b82f6; margin-left: 5px;" onclick="openEditModal({{ p.id }}, '{{ p.tuyen.tinh_nhan }}', '{{ p.tuyen.huyen_nhan|default:'' }}', '{{ p.tuyen.tinh_giao }}', '{{ p.tuyen.huyen_giao|default:'' }}', '{{ p.loai_xe }}', '{{ p.so_khoi|default:'' }}', '{{ p.gia_de_xuat|floatformat:0 }}', '{{ p.ly_do_de_xuat|escapejs }}')">Sửa</button>
+                        <button class="btn-action" style="background: #ef4444; margin-left: 5px;" onclick="deleteProposal({{ p.id }})">Xóa</button>
+                        {% endif %}
+                    {% elif user.is_superuser and p.can_undo %}
+                        <button class="btn-action" style="background: #f59e0b; margin-left: 5px;" onclick="undoProposal({{ p.id }})">Hoàn tác</button>
                     {% endif %}
                 </td>
-                {% endif %}
             </tr>
             {% empty %}
             <tr><td colspan="7" style="text-align: center; padding: 30px;">Chưa có đề xuất nào.</td></tr>
@@ -168,7 +171,44 @@
 </div>
 
 <script>
-    function openProposalModal() { document.getElementById('proposalModal').style.display = 'flex'; }
+    let currentEditProposalId = null;
+
+    function openProposalModal() { 
+        currentEditProposalId = null;
+        document.querySelector('.modal-title').innerText = 'Tạo Đề Xuất Giá Mới';
+        
+        $('#propTinhNhan, #propTinhGiao, #propLoaiXe, #propSoKhoi, #propHuyenNhan, #propHuyenGiao').prop('disabled', false);
+        $('#propGiaDeXuat').val('');
+        $('#propLyDo').val('');
+        
+        document.getElementById('proposalModal').style.display = 'flex'; 
+    }
+    
+    function openEditModal(id, tinh_nhan, huyen_nhan, tinh_giao, huyen_giao, loai_xe, so_khoi, gia, ly_do) {
+        currentEditProposalId = id;
+        document.querySelector('.modal-title').innerText = 'Sửa Đề Xuất Giá';
+        
+        $('#propTinhNhan, #propTinhGiao, #propLoaiXe, #propSoKhoi, #propHuyenNhan, #propHuyenGiao').prop('disabled', false);
+
+        $('#propTinhNhan').val(tinh_nhan).trigger('change');
+        setTimeout(() => { if (huyen_nhan) $('#propHuyenNhan').val(huyen_nhan).trigger('change'); else $('#propHuyenNhan').val('').trigger('change'); }, 200);
+        
+        $('#propTinhGiao').val(tinh_giao).trigger('change');
+        setTimeout(() => { if (huyen_giao) $('#propHuyenGiao').val(huyen_giao).trigger('change'); else $('#propHuyenGiao').val('').trigger('change'); }, 200);
+        $('#propLoaiXe').val(loai_xe).trigger('change');
+        if (so_khoi) {
+            $('#propSoKhoi').val(so_khoi).trigger('change');
+        } else {
+            $('#propSoKhoi').val('').trigger('change');
+        }
+        
+        
+        $('#propGiaDeXuat').val(gia);
+        $('#propLyDo').val(ly_do);
+        
+        document.getElementById('proposalModal').style.display = 'flex';
+    }
+
     function closeProposalModal() { document.getElementById('proposalModal').style.display = 'none'; }
     
     async function fetchBasePrice() {
@@ -230,7 +270,8 @@
                 return;
             }
 
-            const res = await fetch('/api/proposals/create/', {
+            const url = currentEditProposalId ? `/api/proposals/${currentEditProposalId}/update/` : '/api/proposals/create/';
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify(payload)
@@ -241,7 +282,7 @@
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: 'Thành công!',
-                        text: 'Đã gửi đề xuất thành công!',
+                        text: currentEditProposalId ? 'Đã cập nhật đề xuất thành công!' : 'Đã gửi đề xuất thành công!',
                         icon: 'success',
                         timer: 1500,
                         showConfirmButton: false
@@ -249,7 +290,7 @@
                         window.location.reload();
                     });
                 } else {
-                    alert('Đã gửi đề xuất thành công!');
+                    alert(currentEditProposalId ? 'Đã cập nhật đề xuất thành công!' : 'Đã gửi đề xuất thành công!');
                     window.location.reload();
                 }
             } else {
@@ -319,6 +360,74 @@
             Swal.fire({
                 title: 'Thành công!',
                 text: 'Đã từ chối đề xuất.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+        else Swal.fire('Lỗi', data.error, 'error');
+    }
+    
+    async function deleteProposal(id) {
+        const result = await Swal.fire({
+            title: 'Xóa đề xuất?',
+            text: 'Bạn có chắc chắn muốn xóa đề xuất này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Xóa!',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
+        
+        const res = await fetch(`/api/proposals/${id}/delete/`, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if(data.success) {
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã xóa đề xuất.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+        else Swal.fire('Lỗi', data.error, 'error');
+    }
+    
+    async function undoProposal(id) {
+        const result = await Swal.fire({
+            title: 'Hoàn tác?',
+            text: 'Đề xuất này sẽ được chuyển lại trạng thái Chờ duyệt.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Hoàn tác',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!result.isConfirmed) return;
+        
+        const res = await fetch(`/api/proposals/${id}/undo/`, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if(data.success) {
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã hoàn tác đề xuất.',
                 icon: 'success',
                 timer: 1500,
                 showConfirmButton: false
