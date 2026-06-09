@@ -38,6 +38,10 @@
    /* ==========================================================================
       Reset & Base Styles
       ========================================================================== */
+   *, *::before, *::after {
+       box-sizing: border-box;
+   }
+   
    body {
        margin: 0;
        font-family: 'Inter', sans-serif;
@@ -445,12 +449,23 @@
            width: 100%;
        }
        
-       .filter-grid, div[style*="grid-template-columns: repeat"], [class*="-grid"] {
+       .filter-grid, div[style*="grid-template-columns"], [class*="-grid"] {
            grid-template-columns: 1fr !important;
        }
-       .filter-grid > div, div[style*="grid-template-columns: repeat"] > div, [class*="-grid"] > div {
+       .filter-grid > div, div[style*="grid-template-columns"] > div, [class*="-grid"] > div {
            width: 100% !important;
        }
+       
+       /* Fix flex rows in forms */
+       form div[style*="display: flex"] {
+           flex-direction: column !important;
+           align-items: flex-start !important;
+       }
+       form div[style*="display: flex"] > div, form div[style*="display: flex"] > button {
+           width: 100% !important;
+           margin-bottom: 10px;
+       }
+       
        .filter-grid .btn-primary {
            width: 100%;
            margin-top: 10px;
