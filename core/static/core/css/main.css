@@ -364,24 +364,33 @@
        padding: 15px 20px;
        text-align: left;
        font-size: 1.2rem;
+       font-size: 1.1rem;
        cursor: pointer;
        font-family: 'Inter', sans-serif;
-       font-weight: 600;
+       font-weight: 700;
        align-items: center;
        gap: 10px;
-       border-bottom: 1px solid rgba(255,255,255,0.1);
-       box-shadow: var(--shadow-md);
+       border-bottom: 1px solid rgba(0,0,0,0.05);
+       box-shadow: 0 4px 15px rgba(0,0,0,0.03);
    }
    
    .sidebar-overlay {
        display: none;
        position: fixed;
        inset: 0;
-       background: rgba(15, 23, 42, 0.6);
+       background: rgba(15, 23, 42, 0.4);
        z-index: 90;
-       backdrop-filter: blur(6px);
+       backdrop-filter: blur(8px);
+       -webkit-backdrop-filter: blur(8px);
        opacity: 0;
        transition: opacity 0.4s ease;
+   }
+   
+   /* Global Responsive Layout Fixes */
+   @media (max-width: 1024px) {
+       .filter-grid {
+           grid-template-columns: repeat(3, 1fr) !important;
+       }
    }
    
    @media (max-width: 768px) {
@@ -394,10 +403,11 @@
            position: fixed;
            top: 0; left: 0;
            height: 100vh;
-           width: 300px;
+           width: 320px;
            transform: translateX(-100%);
            padding: 24px;
-           box-shadow: 10px 0 30px rgba(0,0,0,0.3);
+           box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+           border-radius: 0 24px 24px 0;
        }
        .sidebar.active {
            transform: translateX(0);
@@ -413,17 +423,53 @@
            z-index: 80;
        }
        .main-content {
-           padding: 20px;
+           padding: 15px;
            height: auto;
            overflow: visible;
        }
-       .glass-card, [style*="overflow-y: auto"] {
-           overflow-x: auto !important;
+       .glass-card {
+           padding: 18px !important;
+           border-radius: 16px !important;
        }
-       table { min-width: 800px !important; }
+       
+       /* Aggressive layout un-breaking for mobile */
+       div[style*="justify-content: space-between"] {
+           flex-direction: column !important;
+           align-items: flex-start !important;
+           gap: 15px !important;
+           height: auto !important;
+       }
+       div[style*="display: flex"][style*="flex-wrap: wrap"], 
+       div[style*="justify-content: flex-end"] {
+           justify-content: flex-start !important;
+           width: 100%;
+       }
+       
+       .filter-grid {
+           grid-template-columns: 1fr !important;
+       }
+       .filter-grid > div {
+           width: 100% !important;
+       }
+       .filter-grid .btn-primary {
+           width: 100%;
+           margin-top: 10px;
+       }
+       
+       /* Aggressive Horizontal Scroll for all container tables */
+       .glass-card, [style*="overflow-y: auto"], [style*="overflow: hidden"] {
+           overflow-x: auto !important;
+           -webkit-overflow-scrolling: touch;
+       }
+       table { 
+           min-width: 900px !important; 
+       }
+       
+       input.form-control, select.form-control {
+           font-size: 16px !important; /* Prevents iOS auto-zoom */
+       }
    }
    
-
    select.form-control {
        appearance: none;
        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
