@@ -445,10 +445,10 @@
            width: 100%;
        }
        
-       .filter-grid, div[style*="grid-template-columns: repeat"] {
+       .filter-grid, div[style*="grid-template-columns: repeat"], [class*="-grid"] {
            grid-template-columns: 1fr !important;
        }
-       .filter-grid > div, div[style*="grid-template-columns: repeat"] > div {
+       .filter-grid > div, div[style*="grid-template-columns: repeat"] > div, [class*="-grid"] > div {
            width: 100% !important;
        }
        .filter-grid .btn-primary {
@@ -468,6 +468,42 @@
        input.form-control, select.form-control {
            font-size: 16px !important; /* Prevents iOS auto-zoom */
        }
+   }
+   
+   /* ==========================================================================
+      SweetAlert2 Premium Styling
+      ========================================================================== */
+   .swal2-popup {
+       border-radius: 24px !important;
+       background: rgba(255, 255, 255, 0.95) !important;
+       backdrop-filter: blur(16px) !important;
+       -webkit-backdrop-filter: blur(16px) !important;
+       border: 1px solid rgba(255, 255, 255, 0.8) !important;
+       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+       font-family: 'Inter', sans-serif !important;
+   }
+   .swal2-title {
+       color: #1e293b !important;
+       font-weight: 700 !important;
+       font-size: 1.5rem !important;
+   }
+   .swal2-html-container {
+       color: #64748b !important;
+       font-weight: 500 !important;
+   }
+   .swal2-confirm {
+       border-radius: 12px !important;
+       font-weight: 600 !important;
+       padding: 12px 28px !important;
+       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+       box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+   }
+   .swal2-cancel {
+       border-radius: 12px !important;
+       font-weight: 600 !important;
+       padding: 12px 28px !important;
+       background: #f1f5f9 !important;
+       color: #475569 !important;
    }
    
    select.form-control {
