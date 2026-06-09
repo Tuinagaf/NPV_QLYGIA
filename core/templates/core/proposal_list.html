@@ -29,16 +29,16 @@
     .btn-reject { background: #ef4444; }
 </style>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; flex-wrap: wrap; gap: 15px;">
     <h1 class="page-title">Đề Xuất Giá Cơ Sở</h1>
-    {% if not user.is_superuser %}
+    {% if perms.core.add_dexuatgiacoso and not user.is_superuser %}
     <button class="btn-primary" onclick="openProposalModal()">+ Tạo Đề Xuất Giá</button>
     {% endif %}
 </div>
 
-<div class="glass-card" id="proposal-list-container" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;">
-    <div style="flex: 1; overflow-y: auto;">
-    <table class="custom-table" style="margin: 0;">
+<div class="glass-card" id="proposal-list-container" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; max-width: 100%;">
+    <div class="table-responsive" style="flex: 1; overflow-y: auto; overflow-x: auto; width: 100%;">
+    <table class="custom-table" style="margin: 0; min-width: 800px;">
         <thead style="background: #f8fafc; position: sticky; top: 0; z-index: 10;">
             <tr>
                 <th>Tuyến & Loại xe</th>

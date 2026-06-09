@@ -37,6 +37,9 @@
             flex-direction: column;
             gap: 15px;
             box-shadow: 4px 0 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
         }
         .sidebar-logo {
             text-align: center;
@@ -70,6 +73,7 @@
             height: 100vh;
             box-sizing: border-box;
             overflow: hidden;
+            position: relative;
         }
         .glass-card {
             background: var(--surface-color);
@@ -168,21 +172,106 @@
             color: var(--text-color);
             line-height: normal;
         }
+        
+        /* Responsive Styles */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .header-mobile {
+            display: none;
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+            justify-content: space-between;
+            margin: -30px -30px 20px -30px;
+            flex-shrink: 0;
+        }
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        @media (max-width: 768px) {
+            body { 
+                flex-direction: column; 
+                height: auto;
+                overflow-y: auto;
+            }
+            .sidebar {
+                position: fixed;
+                top: 0; bottom: 0; left: 0;
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .header-mobile {
+                display: flex;
+                margin: -15px -15px 15px -15px;
+                position: sticky;
+                top: 0;
+                z-index: 900;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            }
+            .main-content {
+                padding: 15px;
+                width: 100vw;
+                height: auto;
+                overflow: visible;
+                display: block;
+            }
+            .filter-grid {
+                grid-template-columns: 1fr !important;
+            }
+            .modal-grid-2 {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-    <div class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <img src="{% static 'core/logo.png' %}?v=2" alt="NPV Group Logo">
         </div>
         <a href="{% url 'search_prices' %}" class="nav-link">🔍 Tra Cứu Giá Thuê Ngoài</a>
+        
+        {% if perms.core.view_giacoso %}
         <a href="{% url 'base_price_list' %}" class="nav-link">💰 Quản Lý Giá Cơ Sở</a>
+        {% endif %}
+        
+        {% if perms.core.view_doitac %}
         <a href="/partners/" class="nav-link">🏢 Quản Lý Đối Tác</a>
+        {% endif %}
+        
+        {% if perms.core.view_dexuatgiacoso %}
         <a href="{% url 'proposal_list' %}" class="nav-link" style="display:flex; justify-content:space-between; align-items:center;">
             <span>📄 Đề Xuất Giá</span>
             <span id="sidebar-proposal-count" style="background:#ef4444; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; display:none;">0</span>
         </a>
+        {% endif %}
+        
+        {% if user.is_superuser %}
+        <a href="{% url 'account_list' %}" class="nav-link">👥 Quản Lý Tài Khoản</a>
+        {% endif %}
         
         <div style="flex: 1;"></div>
         
@@ -203,10 +292,19 @@
         {% endif %}
     </div>
     <div class="main-content">
+        <div class="header-mobile">
+            <h3 style="margin:0; font-size:1.1rem; color:var(--primary-color);">NPV Group</h3>
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        </div>
         {% block content %}{% endblock %}
     </div>
 
     <script>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('active');
+        document.getElementById('sidebarOverlay').classList.toggle('active');
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         function formatVnNumber(val) {
             if (!val) return '';
@@ -325,5 +423,20 @@
     });
     {% endif %}
     </script>
+    {% if messages %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            {% for message in messages %}
+                Swal.fire({
+                    icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% else %}info{% endif %}',
+                    title: 'Thông báo',
+                    text: '{{ message|escapejs }}',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

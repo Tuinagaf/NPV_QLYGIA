@@ -1,0 +1,110 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-shrink: 0; flex-wrap: wrap; gap: 15px;">
+    <div>
+        <h1 style="margin: 0; color: var(--text-color); font-size: 1.8rem;">Quản Lý Tài Khoản</h1>
+        <p style="color: var(--text-muted); margin: 0;">Quản trị tài khoản đăng nhập và phân quyền</p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{% url 'account_create' %}" style="background: var(--primary-color); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">+ Tạo Tài Khoản</a>
+    </div>
+</div>
+
+<div class="glass-card" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+    <div class="table-responsive" style="flex: 1; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 800px;">
+            <thead style="background: #f8fafc; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">
+                <tr>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">ID</th>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Tên đăng nhập</th>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Trạng thái</th>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Vai trò</th>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Ngày tham gia</th>
+                    <th style="padding: 15px 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; text-align: right;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr style="border-top: 1px solid var(--border-color);">
+                    <td style="padding: 15px 20px; font-weight: 500; color: #64748b;">#{{ u.id }}</td>
+                    <td style="padding: 15px 20px; font-weight: 600;">
+                        <a href="{% url 'account_update' u.id %}" style="color: var(--primary-color); text-decoration: none;">{{ u.username }}</a>
+                    </td>
+                    <td style="padding: 15px 20px;">
+                        {% if u.is_active %}
+                        <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Đang hoạt động</span>
+                        {% else %}
+                        <span style="background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Bị khóa</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px;">
+                        {% if u.is_superuser %}
+                        <span style="background: #e0e7ff; color: #4f46e5; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Admin Tổng</span>
+                        {% else %}
+                        <span style="background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Nhân viên</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; color: #475569;">{{ u.date_joined|date:"d/m/Y" }}</td>
+                    <td style="padding: 15px 20px; text-align: right;">
+                        <a href="{% url 'account_update' u.id %}" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem; font-weight: 600; margin-right: 15px;">Sửa</a>
+                        {% if not u.is_superuser %}
+                        <button type="button" onclick="deleteAccount({{ u.id }}, '{{ u.username }}')" style="color: #ef4444; background: none; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer;">Xóa</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="padding: 30px; text-align: center; color: var(--text-muted);">
+                        Chưa có tài khoản nào.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function deleteAccount(id, username) {
+    const result = await Swal.fire({
+        title: 'Xóa tài khoản?',
+        text: `Bạn có chắc chắn muốn xóa tài khoản ${username}? Hành động này sẽ không thể hoàn tác!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Có, Xóa!',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            const response = await fetch(`/api/manage-accounts/${id}/delete/`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Đã xóa!',
+                    text: 'Tài khoản đã được xóa khỏi hệ thống.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

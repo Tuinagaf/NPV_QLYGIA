@@ -121,7 +121,7 @@
 
 <form method="post" id="partner-form" novalidate style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
     {% csrf_token %}
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-shrink: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-shrink: 0; flex-wrap: wrap; gap: 15px;">
         <div>
             <a href="{% if partner %}/partners/{{ partner.pk }}/{% else %}/partners/{% endif %}" class="header-link">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -245,7 +245,7 @@
             
             <div style="margin-bottom: 25px;">
                 <h5 style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">HÀNH TRÌNH (ROUTE)</h5>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                <div class="modal-grid-2" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tỉnh/Thành phố nhận</label>
                         <select class="form-control form-control-sm province-select" name="tinh_nhan[]" required><option value="">Chọn Tỉnh</option></select>
@@ -267,7 +267,7 @@
 
             <div style="margin-bottom: 25px;">
                 <h5 style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">THÔNG SỐ PHƯƠNG TIỆN & HÀNG HÓA</h5>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                <div class="modal-grid-2" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tải trọng (Tấn)</label>
                         <select name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-select" required>
@@ -315,7 +315,7 @@
             
             <div style="background: #f8fafc; border-radius: 8px; padding: 20px; border: 1px solid #f1f5f9;">
                 <h5 style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 12px 0; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">CHI TIẾT VẬN HÀNH & GIÁ</h5>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
+                <div class="modal-grid-2" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
                     <div>
                         <label style="font-size: 0.8rem; font-weight: 500; color: #334155; display: block; margin-bottom: 5px;">Ghép hàng?</label>
                         <select name="co_ghep_hang_khong[]" class="form-control form-control-sm"><option value="1">Có</option><option value="0" selected>Không</option></select>

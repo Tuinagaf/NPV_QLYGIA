@@ -1,16 +1,18 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-shrink: 0;">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; flex-shrink: 0; flex-wrap: wrap; gap: 15px;">
     <div>
         <h1>Danh Sách Đối Tác</h1>
         <p style="color: var(--text-muted); margin: 0;">Quản lý nhà xe và thông tin vận tải</p>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button class="btn-primary" style="background: #64748b; border-color: #64748b; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="downloadPartnerTemplate()"><i class="fa fa-download"></i> Tải File Mẫu</button>
         <button onclick="exportPartnersExcel()" style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"><i class="fa fa-download"></i> Xuất Excel</button>
+        {% if perms.core.add_doitac %}
         <button onclick="document.getElementById('hiddenImportInput').click()" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"><i class="fa fa-upload"></i> Nhập Excel</button>
-        <a href="/partners/create/" style="background: var(--primary-color); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: 600;">+ Thêm Đối Tác</a>
+        <a href="/partners/create/" style="background: var(--primary-color); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">+ Thêm Đối Tác</a>
+        {% endif %}
     </div>
 </div>
 
@@ -40,14 +42,14 @@ function toggleAll(source) {
 
 <!-- Thanh tìm kiếm -->
 <div class="glass-card" style="margin-bottom: 20px; padding: 15px; flex-shrink: 0;">
-    <form method="get" style="display: flex; gap: 10px; align-items: center;">
+    <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <label style="font-weight: 600; white-space: nowrap; margin: 0;">Tìm kiếm:</label>
         <input type="text" 
                name="search" 
                value="{{ search_query }}" 
                placeholder="Tên nhà xe, mã đối tác, SĐT..." 
                class="form-control"
-               style="padding: 8px 12px; font-size: 0.9rem; max-width: 300px; margin: 0; height: 38px; box-sizing: border-box;">
+               style="padding: 8px 12px; font-size: 0.9rem; max-width: 300px; margin: 0; height: 38px; box-sizing: border-box; flex: 1;">
         <button type="submit" 
                 style="background: var(--primary-color); color: white; padding: 0 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; height: 38px; margin: 0; box-sizing: border-box;">
             <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,9 +72,9 @@ function toggleAll(source) {
 </div>
 {% endif %}
 
-<div class="glass-card" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0;">
-    <div style="flex: 1; overflow-y: auto;">
-    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+<div class="glass-card" style="padding: 0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; max-width: 100%;">
+    <div class="table-responsive" style="flex: 1; overflow-y: auto; overflow-x: auto; width: 100%;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 900px;">
         <thead style="background: #f8fafc; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">
             <tr>
                 <th style="padding: 15px 10px; width: 40px; text-align: center;"><input type="checkbox" id="selectAll" onclick="toggleAll(this)" style="width: 16px; height: 16px; cursor: pointer;"></th>
@@ -105,8 +107,12 @@ function toggleAll(source) {
                     </div>
                 </td>
                 <td style="padding: 15px 20px;">
+                    {% if perms.core.change_doitac %}
                     <a href="/partners/{{ p.id }}/edit/" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem; font-weight: 600; margin-right: 10px;">Sửa</a>
+                    {% endif %}
+                    {% if perms.core.delete_doitac %}
                     <button type="button" onclick="deletePartner({{ p.id }})" style="color: #ef4444; background: none; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer;">Xóa</button>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

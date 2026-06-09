@@ -50,6 +50,10 @@ def dashboard(request):
 
 @login_required
 def partner_list(request):
+
+    if not request.user.has_perm('core.view_doitac'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     search_query = request.GET.get('search', '').strip()
     
     if request.user.is_superuser:
@@ -150,6 +154,10 @@ def process_routes(request, partner):
 
 @login_required
 def partner_create(request):
+
+    if not request.user.has_perm('core.add_doitac'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     if request.method == 'POST':
         form = DoiTacForm(request.POST, user=request.user)
         if form.is_valid():
@@ -209,6 +217,10 @@ def partner_create(request):
 
 @login_required
 def partner_detail(request, pk):
+
+    if not request.user.has_perm('core.view_doitac'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     partner = get_object_or_404(DoiTac, pk=pk)
     
     routes = partner.bao_gia.all()
@@ -253,6 +265,10 @@ def partner_detail(request, pk):
 
 @login_required
 def partner_update(request, pk):
+
+    if not request.user.has_perm('core.change_doitac'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     if request.user.is_superuser:
         partner = get_object_or_404(DoiTac, pk=pk)
     else:
@@ -334,6 +350,10 @@ def partner_update(request, pk):
 
 @login_required
 def partner_add_route(request, pk):
+
+    if not request.user.has_perm('core.change_doitac'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     if request.method != 'POST':
         return redirect('partner_detail', pk=pk)
         
@@ -468,6 +488,8 @@ def api_route_detail(request, pk):
 
 @login_required
 def api_route_update(request, pk):
+    if not request.user.has_perm('core.change_doitac'):
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền sửa đối tác nên không thể sửa tuyến xe.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
         
@@ -504,6 +526,8 @@ def api_route_update(request, pk):
 
 @login_required
 def api_delete_route(request, pk):
+    if not request.user.has_perm('core.change_doitac'):
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền sửa đối tác nên không thể xóa tuyến xe.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
         
@@ -524,6 +548,10 @@ from .models import LichSuGiaCoSo
 
 @login_required
 def base_price_list(request):
+
+    if not request.user.has_perm('core.view_giacoso'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     tinh_nhan_qs = TuyenXe.objects.values_list('tinh_nhan', flat=True).distinct()
     tinh_giao_qs = TuyenXe.objects.values_list('tinh_giao', flat=True).distinct()
     tinh_thanh = sorted(list(set(tinh_nhan_qs) | set(tinh_giao_qs)))
@@ -535,6 +563,10 @@ def base_price_list(request):
 
 @login_required
 def api_get_base_prices(request):
+
+    if not request.user.has_perm('core.view_giacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     try:
         tinh_nhan = request.GET.get('tinh_nhan', '')
         huyen_nhan = request.GET.get('huyen_nhan', '')
@@ -817,6 +849,10 @@ def api_base_price_detail(request, pk):
 
 @login_required
 def api_save_base_price(request):
+
+    if not request.user.has_perm('core.add_giacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền thêm giá cơ sở'})
     if request.method != 'POST':
@@ -892,6 +928,10 @@ def api_save_base_price(request):
 
 @login_required
 def api_update_base_price(request, pk):
+
+    if not request.user.has_perm('core.change_giacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền chỉnh sửa giá cơ sở'})
     if request.method != 'POST':
@@ -1027,6 +1067,10 @@ def api_search_prices(request):
 
 @login_required
 def proposal_list_view(request):
+
+    if not request.user.has_perm('core.view_dexuatgiacoso'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     if request.user.is_superuser:
         proposals = DeXuatGiaCoSo.objects.all().order_by('-ngay_tao')
     else:
@@ -1046,6 +1090,10 @@ def proposal_list_view(request):
 
 @login_required
 def api_create_proposal(request):
+
+    if not request.user.has_perm('core.add_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
         
@@ -1093,6 +1141,10 @@ def api_create_proposal(request):
 
 @login_required
 def api_approve_proposal(request, pk):
+
+    if not request.user.has_perm('core.change_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
@@ -1111,6 +1163,10 @@ def api_approve_proposal(request, pk):
 
 @login_required
 def api_reject_proposal(request, pk):
+
+    if not request.user.has_perm('core.change_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
@@ -1148,6 +1204,10 @@ def api_get_base_price(request):
 
 @login_required
 def api_delete_partner(request, pk):
+
+    if not request.user.has_perm('core.delete_doitac'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
         if request.user.is_superuser: p = DoiTac.objects.get(pk=pk)
@@ -2014,6 +2074,10 @@ def api_search_prices(request):
 
 @login_required
 def proposal_list_view(request):
+
+    if not request.user.has_perm('core.view_dexuatgiacoso'):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Bạn không có quyền thực hiện chức năng này.")
     if request.user.is_superuser:
         proposals = DeXuatGiaCoSo.objects.all().order_by('-ngay_tao')
     else:
@@ -2033,6 +2097,10 @@ def proposal_list_view(request):
 
 @login_required
 def api_create_proposal(request):
+
+    if not request.user.has_perm('core.add_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
         
@@ -2080,6 +2148,10 @@ def api_create_proposal(request):
 
 @login_required
 def api_approve_proposal(request, pk):
+
+    if not request.user.has_perm('core.change_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
@@ -2098,6 +2170,10 @@ def api_approve_proposal(request, pk):
 
 @login_required
 def api_reject_proposal(request, pk):
+
+    if not request.user.has_perm('core.change_dexuatgiacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
@@ -2135,6 +2211,10 @@ def api_get_base_price(request):
 
 @login_required
 def api_delete_partner(request, pk):
+
+    if not request.user.has_perm('core.delete_doitac'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
         if request.user.is_superuser: p = DoiTac.objects.get(pk=pk)
@@ -2145,6 +2225,10 @@ def api_delete_partner(request, pk):
 
 @login_required
 def api_delete_base_price(request, pk):
+
+    if not request.user.has_perm('core.delete_giacoso'):
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền thực hiện chức năng này.'})
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
         if not request.user.is_superuser: return JsonResponse({'success': False})
@@ -2542,3 +2626,126 @@ def api_import_base_prices_excel(request):
         traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)})
 
+# ==========================================
+# QUẢN LÝ TÀI KHOẢN
+# ==========================================
+from django.contrib.auth.models import User, Permission
+from django.contrib.auth.decorators import user_passes_test
+
+def is_super(user):
+    return user.is_superuser
+
+@login_required
+@user_passes_test(is_super)
+def account_list_view(request):
+    users = User.objects.all().order_by('-id')
+    return render(request, 'core/account_list.html', {'users': users})
+
+def get_translated_permissions():
+    perms = Permission.objects.filter(content_type__app_label='core').exclude(content_type__model__in=['lichsugiacoso', 'lichsubaogia', 'tuyenxe', 'baogiathongtinxe'])
+    translation_map = {
+        'add': 'Thêm',
+        'change': 'Sửa',
+        'delete': 'Xóa',
+        'view': 'Xem',
+        'doitac': 'Đối tác',
+        'tuyenxe': 'Tuyến xe',
+        'giacoso': 'Giá cơ sở',
+        'lichsugiacoso': 'Lịch sử giá cơ sở',
+        'baogiathongtinxe': 'Báo giá xe',
+        'lichsubaogia': 'Lịch sử báo giá',
+        'dexuatgiacoso': 'Đề xuất giá cơ sở'
+    }
+    
+    translated_perms = []
+    for p in perms:
+        try:
+            action, model = p.codename.split('_', 1)
+            action_vn = translation_map.get(action, action)
+            model_vn = translation_map.get(model, model)
+            p.vn_name = f"{action_vn} {model_vn}"
+            p.action = action
+            p.model = model
+        except:
+            p.vn_name = p.name
+            p.action = ''
+            p.model = ''
+        translated_perms.append(p)
+    return translated_perms
+
+@login_required
+@user_passes_test(is_super)
+def account_create_view(request):
+    core_permissions = get_translated_permissions()
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        perms = request.POST.getlist('permissions[]')
+        
+        if not username or not password:
+            messages.error(request, 'Tên đăng nhập và mật khẩu là bắt buộc.')
+        elif User.objects.filter(username=username).exists():
+            messages.error(request, 'Tên đăng nhập đã tồn tại.')
+        else:
+            user = User.objects.create_user(username=username, password=password)
+            user.is_staff = True
+            user.save()
+            
+            # Gán quyền
+            if perms:
+                selected_perms = Permission.objects.filter(id__in=perms)
+                user.user_permissions.set(selected_perms)
+            
+            messages.success(request, f'Đã tạo tài khoản {username} thành công.')
+            return redirect('account_list')
+            
+    return render(request, 'core/account_form.html', {
+        'title': 'Thêm Tài Khoản Mới',
+        'core_permissions': core_permissions,
+        'user_perms': []
+    })
+
+@login_required
+@user_passes_test(is_super)
+def account_update_view(request, pk):
+    edit_user = get_object_or_404(User, pk=pk)
+    core_permissions = get_translated_permissions()
+    user_perms = edit_user.user_permissions.values_list('id', flat=True)
+    
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        perms = request.POST.getlist('permissions[]')
+        is_active = request.POST.get('is_active') == '1'
+        
+        edit_user.is_active = is_active
+        if password:
+            edit_user.set_password(password)
+        edit_user.save()
+        
+        if not edit_user.is_superuser:
+            selected_perms = Permission.objects.filter(id__in=perms)
+            edit_user.user_permissions.set(selected_perms)
+            
+        messages.success(request, f'Đã cập nhật tài khoản {edit_user.username}.')
+        return redirect('account_list')
+        
+    return render(request, 'core/account_form.html', {
+        'title': 'Cập Nhật Tài Khoản',
+        'edit_user': edit_user,
+        'core_permissions': core_permissions,
+        'user_perms': user_perms
+    })
+
+@login_required
+@user_passes_test(is_super)
+def api_delete_account(request, pk):
+    if request.method == 'POST':
+        try:
+            u = User.objects.get(pk=pk)
+            if u.is_superuser:
+                return JsonResponse({'success': False, 'error': 'Không thể xóa tài khoản Admin tổng'})
+            u.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Method not allowed'})

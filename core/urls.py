@@ -41,4 +41,10 @@ urlpatterns = [
     path('api/partners/import/', views.api_import_partners_excel, name='api_import_partners_excel'),
     path('api/base-prices/<int:pk>/delete/', views.api_delete_base_price, name='api_delete_base_price'),
     path('api/check-new-proposals/', views.api_check_new_proposals, name='api_check_new_proposals'),
+    
+    # Account Management
+    path('manage-accounts/', views.account_list_view, name='account_list'),
+    path('manage-accounts/create/', views.account_create_view, name='account_create'),
+    path('manage-accounts/<int:pk>/edit/', views.account_update_view, name='account_update'),
+    path('api/manage-accounts/<int:pk>/delete/', views.api_delete_account, name='api_delete_account'),
 ]
