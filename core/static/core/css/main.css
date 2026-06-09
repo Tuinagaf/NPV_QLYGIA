@@ -388,8 +388,8 @@
    
    /* Global Responsive Layout Fixes */
    @media (max-width: 1024px) {
-       .filter-grid {
-           grid-template-columns: repeat(3, 1fr) !important;
+       .filter-grid, div[style*="grid-template-columns: repeat"] {
+           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
        }
    }
    
@@ -445,10 +445,10 @@
            width: 100%;
        }
        
-       .filter-grid {
+       .filter-grid, div[style*="grid-template-columns: repeat"] {
            grid-template-columns: 1fr !important;
        }
-       .filter-grid > div {
+       .filter-grid > div, div[style*="grid-template-columns: repeat"] > div {
            width: 100% !important;
        }
        .filter-grid .btn-primary {
