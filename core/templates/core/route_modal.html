@@ -1,0 +1,433 @@
+<style>
+    /* Modal Styles */
+    .route-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .route-modal-overlay.show {
+        display: flex;
+        opacity: 1;
+    }
+    .route-modal-content {
+        background: white;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 900px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        transform: scale(0.95) translateY(20px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+    }
+    .route-modal-overlay.show .route-modal-content {
+        transform: scale(1) translateY(0);
+    }
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        border-radius: 16px 16px 0 0;
+    }
+    .modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .modal-body {
+        padding: 24px;
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: background 0.2s, color 0.2s;
+    }
+    .modal-close:hover {
+        background: var(--bg-color);
+        color: var(--text-color);
+    }
+    
+    .route-info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 24px;
+        background: var(--bg-color);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+    .route-info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .route-info-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .route-info-value {
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .price-update-section {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .price-update-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 2fr;
+        gap: 15px;
+        align-items: end;
+    }
+    
+    .history-table th {
+        background: var(--bg-color);
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .history-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+    }
+</style>
+
+<div class="route-modal-overlay" id="routeModal">
+    {% csrf_token %}
+    <div class="route-modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--primary-color);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Chi tiết tuyến <span id="modalMaTuyen" style="color: var(--primary-color);"></span>
+            </h2>
+            <button class="modal-close" onclick="closeRouteModal()">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Loading Indicator -->
+            <div id="modalLoading" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <svg class="animate-spin" style="width: 40px; height: 40px; margin: 0 auto 15px; color: var(--primary-color);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div>Đang tải dữ liệu...</div>
+            </div>
+            
+            <div id="modalContent" style="display: none;">
+                <!-- Partner Info -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border-color);">
+                    <div style="min-width: 0;">
+                        <div class="route-info-label">Mã đối tác</div>
+                        <div class="route-info-value" id="modalMaDoiTac" style="font-size: 1.1rem; font-weight: 700; color: var(--text-color); word-break: break-all;"></div>
+                    </div>
+                    <div style="min-width: 0;">
+                        <div class="route-info-label">Tên đối tác</div>
+                        <div class="route-info-value" id="modalTenDoiTac" style="color: var(--primary-color); font-size: 1.1rem; font-weight: 600; word-break: break-word;"></div>
+                    </div>
+                    <div style="min-width: 0;">
+                        <div class="route-info-label">Liên hệ</div>
+                        <div class="route-info-value" id="modalSdtDoiTac" style="color: var(--text-color); font-size: 1.1rem; font-weight: 600;"></div>
+                    </div>
+                </div>
+
+                <div class="route-info-grid">
+                    <div class="route-info-item">
+                        <span class="route-info-label">Tỉnh/Thành phố nhận</span>
+                        <span class="route-info-value" id="modalDiemNhan"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Tỉnh/Thành phố giao</span>
+                        <span class="route-info-value" id="modalDiemGiao"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Tải trọng (Tấn)</span>
+                        <span class="route-info-value" id="modalTaiTrong"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Số khối</span>
+                        <span class="route-info-value" id="modalSoKhoi"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Kích thước (DxRxC)</span>
+                        <span class="route-info-value" id="modalKhoi"></span>
+                    </div>
+                    
+                    <div class="route-info-item">
+                        <span class="route-info-label">Loại thùng</span>
+                        <span class="route-info-value" id="modalLoaiThung"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Đơn giá</span>
+                        <span class="route-info-value" id="modalDonGia" style="font-size: 1.2rem; color: #10b981;"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Ghép hàng</span>
+                        <span class="route-info-value" id="modalGhepHang"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Chịu quá tải</span>
+                        <span class="route-info-value" id="modalChiuQuaTai"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Đi nhiều điểm</span>
+                        <span class="route-info-value" id="modalDiNhieuDiem"></span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="route-info-label">Số chiều đi</span>
+                        <span class="route-info-value" id="modalSoChieuDi"></span>
+                    </div>
+                </div>
+                
+                <!-- Update Price Section -->
+                <h4 id="updatePriceTitle" style="margin: 0 0 15px 0; color: var(--text-color);">Cập nhật Đơn giá</h4>
+                <div id="updatePriceSection" class="price-update-section">
+                    <form id="priceUpdateForm" onsubmit="submitPriceUpdate(event)">
+                        <input type="hidden" id="modalRouteId">
+                        <div class="price-update-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: flex-end;">
+                            <div>
+                                <label class="form-label" style="font-weight: 600;">Đơn giá mới (đ)</label>
+                                <input type="text" id="updateDonGia" class="form-control vn-number text-right" required style="font-weight: bold; color: var(--primary-color); height: 38px; box-sizing: border-box; margin: 0;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-weight: 600;">Giá xăng tham chiếu</label>
+                                <input type="text" id="updateGiaXang" class="form-control vn-number text-right" placeholder="Tùy chọn" style="height: 38px; box-sizing: border-box; margin: 0;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-weight: 600;">Lý do thay đổi</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="updateLyDo" class="form-control" placeholder="Nhập lý do..." required style="height: 38px; box-sizing: border-box; margin: 0;">
+                                    <button type="submit" class="btn-primary" style="white-space: nowrap; height: 38px; margin: 0; display: inline-flex; align-items: center;" id="btnUpdatePrice">Lưu giá</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- History Table -->
+                <h4 style="margin: 30px 0 15px 0; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Lịch sử thay đổi giá
+                </h4>
+                <div style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse;" class="history-table">
+                        <thead>
+                            <tr>
+                            <th>Ngày bắt đầu</th>
+                            <th>Giá cũ</th>
+                            <th>Giá mới</th>
+                            <th>Ngày kết thúc</th>
+                            <th>Lý do & Tham chiếu</th>
+                            <th>Người đổi</th>
+                        </tr>
+                        </thead>
+                        <tbody id="modalHistoryBody">
+                            <!-- JS will populate this -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function formatMoney(amount) {
+    return Number(amount).toLocaleString('vi-VN');
+}
+
+async function openRouteModal(id) {
+    const modal = document.getElementById('routeModal');
+    modal.classList.add('show');
+    document.getElementById('modalLoading').style.display = 'block';
+    document.getElementById('modalContent').style.display = 'none';
+    
+    try {
+        const res = await fetch(`/api/routes/${id}/?t=${Date.now()}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            document.getElementById('modalRouteId').value = data.id;
+            document.getElementById('modalMaTuyen').textContent = 'BG-' + data.id;
+            const linkStyle = "color: inherit; text-decoration: none; cursor: pointer;";
+            const hoverAttr = "onmouseover=\"this.style.textDecoration='underline'\" onmouseout=\"this.style.textDecoration='none'\"";
+            
+            document.getElementById('modalTenDoiTac').innerHTML = `<a href="/partners/${data.doi_tac_id}/" style="${linkStyle}" ${hoverAttr}>${data.ten_doi_tac}</a>`;
+            document.getElementById('modalSdtDoiTac').textContent = data.sdt_doi_tac;
+            document.getElementById('modalMaDoiTac').innerHTML = `<a href="/partners/${data.doi_tac_id}/" style="${linkStyle}" ${hoverAttr}>${data.ma_doi_tac}</a>`;
+            
+            document.getElementById('modalDiemNhan').textContent = `${data.huyen_nhan}, ${data.tinh_nhan}`;
+            document.getElementById('modalDiemGiao').textContent = `${data.huyen_giao}, ${data.tinh_giao}`;
+            
+            document.getElementById('modalTaiTrong').textContent = data.tai_trong_tan;
+            document.getElementById('modalSoKhoi').textContent = data.so_khoi || '-';
+            document.getElementById('modalKhoi').textContent = data.kich_thuoc || '-';
+            document.getElementById('modalLoaiThung').textContent = data.loai_thung || '-';
+            document.getElementById('modalDonGia').textContent = formatMoney(data.muc_gia_chap_nhan) + ' ₫';
+            
+            document.getElementById('modalGhepHang').textContent = data.co_ghep_hang_khong ? 'Có' : 'Không';
+            document.getElementById('modalChiuQuaTai').textContent = data.co_chiu_qua_tai_khong ? 'Có' : 'Không';
+            document.getElementById('modalDiNhieuDiem').textContent = data.co_di_nhieu_diem_khong ? 'Có' : 'Không';
+            document.getElementById('modalSoChieuDi').textContent = data.di_1_hay_2_chieu + ' chiều';
+            
+            // Prefill update form
+            document.getElementById('updateDonGia').value = formatMoney(data.muc_gia_chap_nhan);
+            document.getElementById('updateGiaXang').value = '';
+            document.getElementById('updateLyDo').value = '';
+            
+            // Show/Hide Update Price Section based on permissions
+            if (data.can_edit) {
+                document.getElementById('updatePriceTitle').style.display = 'block';
+                document.getElementById('updatePriceSection').style.display = 'block';
+            } else {
+                document.getElementById('updatePriceTitle').style.display = 'none';
+                document.getElementById('updatePriceSection').style.display = 'none';
+            }
+            
+            // History
+            const histTbody = document.getElementById('modalHistoryBody');
+            let html = '';
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(h => {
+                    html += `
+                        <tr>
+                            <td>${h.ngay_bat_dau || '-'}</td>
+                            <td class="old-price" style="text-decoration: line-through;">${formatMoney(h.gia_cu || 0)} ₫</td>
+                            <td class="new-price">${formatMoney(h.gia_moi)} ₫</td>
+                            <td>${h.ngay_ket_thuc || '-'}</td>
+                            <td>
+                                <div>${h.ly_do_doi}</div>
+                                <div style="font-size:0.75rem; color:#64748b;">Giá xăng: ${h.gia_xang != '-' ? formatMoney(h.gia_xang) + ' ₫' : '-'}</div>
+                            </td>
+                            <td>${h.nguoi_doi}</td>
+                        </tr>
+                    `;
+                });
+                histTbody.innerHTML = html;
+            } else {
+                histTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Chưa có lịch sử thay đổi giá</td></tr>';
+            }
+            
+            document.getElementById('modalLoading').style.display = 'none';
+            document.getElementById('modalContent').style.display = 'block';
+        } else {
+            alert('Lỗi khi tải chi tiết tuyến: ' + data.error);
+            closeRouteModal();
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Lỗi kết nối.');
+        closeRouteModal();
+    }
+}
+
+function closeRouteModal() {
+    const modal = document.getElementById('routeModal');
+    modal.classList.remove('show');
+}
+
+async function submitPriceUpdate(e) {
+    e.preventDefault();
+    const id = document.getElementById('modalRouteId').value;
+    const btn = document.getElementById('btnUpdatePrice');
+    
+    const payload = {
+        muc_gia_chap_nhan: document.getElementById('updateDonGia').value,
+        gia_xang: document.getElementById('updateGiaXang').value,
+        ly_do_doi: document.getElementById('updateLyDo').value
+    };
+    
+    const result = await Swal.fire({
+        title: 'Lưu thay đổi?',
+        text: 'Bạn có chắc chắn muốn cập nhật giá mới cho tuyến này?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0ea5e9',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Có, Lưu!',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (!result.isConfirmed) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+    
+    try {
+        const res = await fetch(`/api/routes/${id}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            Swal.fire({
+                title: 'Thành công!',
+                text: 'Đã cập nhật giá mới.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(async () => {
+                await openRouteModal(id);
+                // Cập nhật DOM trực tiếp để không cần load lại trang
+                const priceElement = document.getElementById(`route-price-${id}`);
+                if (priceElement) {
+                    const rawVal = payload.muc_gia_chap_nhan.toString().replace(/\./g, '').replace(/,/g, '');
+                    priceElement.textContent = formatMoney(rawVal);
+                }
+            });
+        } else {
+            Swal.fire('Lỗi cập nhật', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch(err) {
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lưu giá';
+    }
+}
+</script>

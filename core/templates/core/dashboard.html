@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h1>Bảng Điều Khiển</h1>
+<p style="color: var(--text-muted); margin-bottom: 30px;">Tổng quan dữ liệu hệ thống</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+    <div class="glass-card" style="text-align: center; border-top: 4px solid #3b82f6;">
+        <h3 style="margin: 0; color: var(--text-muted);">Tổng Đối Tác</h3>
+        <p style="font-size: 2.5rem; font-weight: 700; margin: 10px 0 0;">{{ total_partners }}</p>
+    </div>
+    <div class="glass-card" style="text-align: center; border-top: 4px solid #10b981;">
+        <h3 style="margin: 0; color: var(--text-muted);">Tổng Tuyến Xe</h3>
+        <p style="font-size: 2.5rem; font-weight: 700; margin: 10px 0 0;">{{ total_routes }}</p>
+    </div>
+    <div class="glass-card" style="text-align: center; border-top: 4px solid #f59e0b;">
+        <h3 style="margin: 0; color: var(--text-muted);">Giá Cơ Sở</h3>
+        <p style="font-size: 2.5rem; font-weight: 700; margin: 10px 0 0;">{{ total_prices }}</p>
+    </div>
+    <div class="glass-card" style="text-align: center; border-top: 4px solid #8b5cf6;">
+        <h3 style="margin: 0; color: var(--text-muted);">Báo Giá</h3>
+        <p style="font-size: 2.5rem; font-weight: 700; margin: 10px 0 0;">{{ total_quotations }}</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,449 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .header-link {
+        display: inline-flex;
+        align-items: center;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+        transition: color 0.2s;
+    }
+    .header-link:hover { color: var(--primary-color); }
+    .header-link svg { width: 16px; height: 16px; margin-right: 5px; }
+    
+    .page-title {
+        font-size: 1.8rem;
+        color: var(--text-color);
+        margin: 0;
+        font-weight: 700;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+    
+    .info-value {
+        font-size: 1rem;
+        color: var(--text-color);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+    }
+    .info-value svg {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        color: var(--text-muted);
+    }
+    
+    .divider {
+        height: 1px;
+        background-color: var(--border-color);
+        margin: 20px 0;
+    }
+    
+    .tag-section {
+        display: flex;
+        gap: 40px;
+    }
+    
+    .tag-group h4 {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin: 0 0 10px 0;
+    }
+    
+    .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .tag {
+        background-color: #f1f5f9;
+        color: var(--text-muted);
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .tag.tag-blue {
+        background-color: #eff6ff;
+        color: #3b82f6;
+    }
+    
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    
+    .custom-table th {
+        padding: 15px 10px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .custom-table td {
+        padding: 15px 10px;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+    
+    .route-cell {
+        display: flex;
+        align-items: center;
+    }
+    .route-cell svg {
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted);
+        margin-right: 8px;
+    }
+    
+    .status-trong-gia {
+        color: #10b981;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        margin-top: 4px;
+    }
+    .status-vuot-gia {
+        color: #ef4444;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        margin-top: 4px;
+    }
+    
+    .btn-edit {
+        background: white;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .btn-edit:hover {
+        background: #f8fafc;
+    }
+    .btn-edit svg {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        color: var(--text-muted);
+    }
+</style>
+
+<div style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column;">
+
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; flex-shrink: 0;">
+    <div>
+        <a href="/partners/" class="header-link">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Quản lý nhà xe
+        </a>
+        <h1 class="page-title">{{ partner.ten_nha_xe }}</h1>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="/api/partners/export/?partner_id={{ partner.pk }}" class="btn-edit" style="background: #3b82f6;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Xuất Excel
+        </a>
+        {% if can_edit %}
+        <a href="/partners/{{ partner.pk }}/edit/" class="btn-edit">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Sửa thông tin
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="glass-card" style="margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 30px; margin-top: 10px;">
+        <!-- 1. THÔNG TIN CƠ BẢN -->
+        <div style="grid-column: 1 / -1;">
+            <h4 style="color: var(--text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">1. THÔNG TIN CƠ BẢN</h4>
+        </div>
+        
+        <div>
+            <div class="info-label">Mã nhà xe</div>
+            <div class="info-value">{{ partner.ma_nha_xe|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Tên nhà xe</div>
+            <div class="info-value" style="font-weight: 600; color: var(--primary-color);">{{ partner.ten_nha_xe|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Mã số thuế</div>
+            <div class="info-value">{{ partner.ma_so_thue|default:"-" }}</div>
+        </div>
+
+        <!-- 2. LIÊN HỆ & QUẢN LÝ -->
+        <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <h4 style="color: var(--text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">2. LIÊN HỆ & QUẢN LÝ</h4>
+        </div>
+        
+        <div>
+            <div class="info-label">Người quản lý</div>
+            <div class="info-value">
+                <span style="background: rgba(2, 132, 199, 0.1); color: #0284c7; padding: 2px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">{{ partner.nguoi_quan_ly|default:"-" }}</span>
+            </div>
+        </div>
+
+
+        <div>
+            <div class="info-label">Số điện thoại</div>
+            <div class="info-value" style="font-weight: 600;">{{ partner.so_dien_thoai|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Tên Zalo</div>
+            <div class="info-value">{{ partner.ten_zalo|default:"-" }}</div>
+        </div>
+        <div></div>
+
+        <!-- 3. THÔNG TIN THANH TOÁN -->
+        <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <h4 style="color: var(--text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">3. THÔNG TIN THANH TOÁN</h4>
+        </div>
+        
+        <div>
+            <div class="info-label">Tên đơn vị xuất Hóa đơn</div>
+            <div class="info-value">{{ partner.ten_don_vi_xuat_hoa_don|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Địa chỉ xuất Hóa đơn</div>
+            <div class="info-value">{{ partner.dia_chi_xuat_hoa_don|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Người đại diện</div>
+            <div class="info-value">{{ partner.nguoi_dai_dien|default:"-" }}</div>
+        </div>
+        
+        <div>
+            <div class="info-label">Số tài khoản</div>
+            <div class="info-value">{{ partner.so_tai_khoan|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Ngân hàng</div>
+            <div class="info-value">{{ partner.ngan_hang|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Thời hạn thanh toán</div>
+            <div class="info-value">{{ partner.thoi_han_thanh_toan|default:"-" }}</div>
+        </div>
+
+        <!-- 4. VẬN HÀNH & LOGISTICS -->
+        <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <h4 style="color: var(--text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">4. VẬN HÀNH & ĐÁNH GIÁ</h4>
+        </div>
+        
+        <div>
+            <div class="info-label">Địa chỉ</div>
+            <div class="info-value">{{ partner.dia_chi|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="info-label">Tính sẵn sàng</div>
+            <div class="info-value">
+                {% if partner.tinh_san_sang == 'Cao' %}
+                <span style="color: #10b981; font-weight: 600;">Cao</span>
+                {% elif partner.tinh_san_sang == 'Thấp' %}
+                <span style="color: #ef4444; font-weight: 600;">Thấp</span>
+                {% else %}
+                <span style="color: #f59e0b; font-weight: 600;">Trung Bình</span>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="info-label">Có hợp đồng</div>
+            <div class="info-value">
+                {% if partner.co_hop_dong %}
+                <span style="color: #10b981; font-weight: 600;">Có</span>
+                {% else %}
+                <span style="color: var(--text-muted);">Không</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div>
+            <div class="info-label">Chất lượng</div>
+            <div class="info-value">
+                {% if partner.chat_luong %}
+                <div style="display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px;">
+                    <span style="font-size: 1.25rem; font-weight: 800; color: var(--text-color); line-height: 1;">{{ partner.chat_luong }}</span>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">/ 10</span>
+                </div>
+                <div style="width: 100%; max-width: 200px; height: 8px; background-color: var(--border-color); border-radius: 10px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="height: 100%; border-radius: 10px; transition: width 0.5s ease;
+                        {% if partner.chat_luong >= 8 %} background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 8px rgba(16,185,129,0.5);
+                        {% elif partner.chat_luong >= 5 %} background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 8px rgba(245,158,11,0.5);
+                        {% else %} background: linear-gradient(90deg, #ef4444, #f87171); box-shadow: 0 0 8px rgba(239,68,68,0.5); {% endif %}
+                        width: calc({{ partner.chat_luong }} * 10%);">
+                    </div>
+                </div>
+                {% else %}
+                <span style="color: var(--text-muted);">-</span>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="info-label">Ghi chú</div>
+            <div class="info-value" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;">{{ partner.ghi_chu|default:"-" }}</div>
+        </div>
+        <!-- 5. CHI PHÍ -->
+        <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <h4 style="color: var(--text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">5. CHI PHÍ</h4>
+        </div>
+        
+        <div>
+            <div class="info-label">Phí rớt điểm</div>
+            <div class="info-value" style="font-weight: 600;">{% if partner.phi_rot_diem %}{{ partner.phi_rot_diem|floatformat:"0g" }} đ{% else %}-{% endif %}</div>
+        </div>
+        <div>
+            <div class="info-label">Phí bốc xếp</div>
+            <div class="info-value" style="font-weight: 600;">{% if partner.phi_boc_xep %}{{ partner.phi_boc_xep|floatformat:"0g" }} đ{% else %}-{% endif %}</div>
+        </div>
+        <div>
+            <div class="info-label">Phí đi quá tải</div>
+            <div class="info-value" style="font-weight: 600;">{% if partner.phi_di_qua_tai %}{{ partner.phi_di_qua_tai|floatformat:"0g" }} đ{% else %}-{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h3 style="margin-top: 0; margin-bottom: 5px; color: var(--text-color); font-size: 1.2rem;">Tuyến xe & Báo giá</h3>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Thông tin cơ bản của các tuyến đường vận tải</p>
+            </div>
+        </div>
+    
+    <div class="table-container">
+        <table class="custom-table">
+            <thead style="background: rgba(0,0,0,0.02);">
+                <tr>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Mã Tuyến</th>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Tuyến Đường</th>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Tải trọng (Tấn)</th>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Số khối</th>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Kích thước (DxRxC)</th>
+                    <th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Loại thùng</th>
+                                        <th class="text-right" style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Đơn giá (đ)</th>
+                    {% if can_edit %}<th style="padding: 15px 20px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Thao tác</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in routes %}
+                <tr style="border-top: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 15px 20px; font-weight: 600; color: var(--primary-color); cursor: pointer; text-decoration: underline;" onclick="openRouteModal({{ r.id }})" title="Click để xem chi tiết tuyến">BG-{{ r.id }}</td>
+                    <td style="padding: 15px 20px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="display: inline-block; width: 8px; height: 8px; border: 1.5px solid var(--text-muted); border-radius: 50%; background: transparent;"></span>
+                            {{ r.tuyen.huyen_nhan }}, {{ r.tuyen.tinh_nhan }} 
+                            <span style="color:var(--text-muted); margin:0 4px;">→</span> 
+                            {{ r.tuyen.huyen_giao }}, {{ r.tuyen.tinh_giao }}
+                        </div>
+                    </td>
+                    <td style="padding: 15px 20px;">{{ r.tai_trong_tan }}</td>
+                    <td style="padding: 15px 20px;">{{ r.so_khoi|default:"-" }}</td>
+                    <td style="padding: 15px 20px;">{{ r.kich_thuoc|default:"-" }}</td>
+                    <td style="padding: 15px 20px;">{{ r.loai_thung|default:"-" }}</td>
+                    <td class="text-right" style="padding: 15px 20px; font-weight: 700; {% if r.gia_co_so_val and not r.trong_gia %}color: #ef4444;{% elif r.gia_co_so_val and r.trong_gia %}color: #10b981;{% endif %}">
+                        <span id="route-price-{{ r.id }}">{{ r.muc_gia_chap_nhan|floatformat:"0g" }}</span>đ
+                    </td>
+                    {% if can_edit %}
+                    <td style="padding: 15px 20px;">
+                        <button type="button" class="btn-icon btn-delete-row" onclick="deleteRoute({{ r.id }})" title="Xóa tuyến này" style="color: #ef4444; background: none; border: none; cursor: pointer;">
+                            <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="padding: 30px; text-align: center; color: var(--text-muted);">Chưa có bảng giá cho tuyến nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function deleteRoute(routeId) {
+        event.stopPropagation();
+        const result = await Swal.fire({
+            title: 'Xóa tuyến đường?',
+            text: 'Bạn có chắc chắn muốn xóa tuyến này khỏi cơ sở dữ liệu?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Xóa!',
+            cancelButtonText: 'Không'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/api/routes/${routeId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Đã xóa!',
+                        text: 'Tuyến đường đã được xóa.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+            }
+        }
+    }
+</script>
+</div>
+{% include 'core/route_modal.html' %}
+{% endblock %}
