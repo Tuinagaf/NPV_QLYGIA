@@ -2144,6 +2144,23 @@ def api_delete_partner(request, pk):
     except Exception as e: return JsonResponse({'success': False})
 
 @login_required
+def api_bulk_delete_partners(request):
+    if request.method != 'POST': return JsonResponse({'success': False})
+    try:
+        ids_str = request.POST.get('ids', '')
+        if not ids_str: return JsonResponse({'success': False, 'error': 'No ids provided'})
+        ids = [int(i.strip()) for i in ids_str.split(',') if i.strip().isdigit()]
+        
+        if request.user.is_superuser:
+            DoiTac.objects.filter(id__in=ids).update(is_deleted=True)
+        else:
+            DoiTac.objects.filter(id__in=ids, nguoi_quan_ly=request.user.username).update(is_deleted=True)
+            
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
 def api_delete_base_price(request, pk):
     if request.method != 'POST': return JsonResponse({'success': False})
     try:

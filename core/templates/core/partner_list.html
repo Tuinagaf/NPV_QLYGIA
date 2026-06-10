@@ -7,6 +7,7 @@
         <p style="color: var(--text-muted); margin: 0;">Quản lý nhà xe và thông tin vận tải</p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; padding: 5px 0;">
+        <button id="btnBulkDelete" class="btn-primary" style="background: #ef4444; border-color: #ef4444; display: none;" onclick="bulkDeletePartners()"><i class="fa fa-trash"></i> Xóa đã chọn</button>
         <button class="btn-primary" style="background: #64748b; border-color: #64748b;" onclick="downloadPartnerTemplate()"><i class="fa fa-download"></i> Tải File Mẫu</button>
         <button class="btn-primary" style="background: #3b82f6; border-color: #3b82f6;" onclick="exportPartnersExcel()"><i class="fa fa-download"></i> Xuất Excel</button>
         <button class="btn-primary" style="background: #10b981; border-color: #10b981;" onclick="document.getElementById('hiddenImportInput').click()"><i class="fa fa-upload"></i> Nhập Excel</button>
@@ -32,9 +33,69 @@ function exportPartnersExcel() {
     }
 }
 
+function updateBulkDeleteButton() {
+    const checked = document.querySelectorAll('.partner-checkbox:checked').length;
+    document.getElementById('btnBulkDelete').style.display = checked > 0 ? 'inline-block' : 'none';
+}
+
 function toggleAll(source) {
     const checkboxes = document.querySelectorAll('.partner-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBulkDeleteButton();
+}
+
+// Attach event listener to individual checkboxes
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.partner-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateBulkDeleteButton);
+    });
+});
+
+async function bulkDeletePartners() {
+    const checkboxes = document.querySelectorAll('.partner-checkbox:checked');
+    if (checkboxes.length === 0) return;
+    
+    const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+    
+    const result = await Swal.fire({
+        title: 'Xóa đối tác?',
+        text: `Bạn có chắc chắn muốn xóa ${checkboxes.length} đối tác đã chọn? Hành động này sẽ không thể hoàn tác!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Có, Xóa tất cả!',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            formData.append('ids', ids);
+            
+            const response = await fetch('/api/partners/bulk-delete/', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Đã xóa!',
+                    text: 'Các đối tác đã chọn đã được xóa khỏi hệ thống.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+        }
+    }
 }
 </script>
 

@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/partners/export/', views.api_export_partners_excel, name='api_export_partners_excel'),
     path('api/partners/template/', views.api_export_partner_template, name='api_export_partner_template'),
     path('api/partners/import/', views.api_import_partners_excel, name='api_import_partners_excel'),
+    path('api/partners/bulk-delete/', views.api_bulk_delete_partners, name='api_bulk_delete_partners'),
     path('api/base-prices/<int:pk>/delete/', views.api_delete_base_price, name='api_delete_base_price'),
     path('api/check-new-proposals/', views.api_check_new_proposals, name='api_check_new_proposals'),
     
