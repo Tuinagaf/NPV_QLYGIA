@@ -20,24 +20,32 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Cài đặt Docker nếu chưa có
+            # Cài đặt Docker & Docker Compose (plugin) nếu chưa có
             if ! command -v docker &> /dev/null; then
               sudo apt-get update -y
-              sudo apt-get install docker.io docker-compose -y
+              sudo apt-get install -y docker.io docker-compose-plugin
               sudo systemctl start docker
               sudo systemctl enable docker
-              sudo usermod -aG docker $USER
             fi
 
-            # Clone code nếu lần đầu tiên, hoặc pull code mới nếu đã có
+            # Đảm bảo Docker Compose có thể chạy qua lệnh 'docker compose'
+            if ! docker compose version &> /dev/null; then
+              echo "Docker Compose không khả dụng, kiểm tra cài đặt lại."
+              exit 1
+            fi
+
+            # Clone repo nếu chưa tồn tại, nếu đã có thì reset lại về trạng thái remote để tránh divergent
             if [ ! -d "$HOME/NPV_QLYGIA" ]; then
               git clone https://github.com/Tuinagaf/NPV_QLYGIA.git $HOME/NPV_QLYGIA
+            else
+              cd $HOME/NPV_QLYGIA
+              git fetch origin
+              git reset --hard origin/master
             fi
 
             cd $HOME/NPV_QLYGIA
-            git pull origin master
 
-            # Chạy Docker (dùng sudo vì có thể chưa áp dụng được group docker)
+            # Dừng và khởi chạy Docker Compose
             sudo docker-compose down || true
             sudo docker-compose up -d --build
             sudo docker-compose exec -T web python manage.py migrate
