@@ -2609,7 +2609,7 @@ def api_import_base_prices_excel(request):
             if loai_xe == "1.25T":
                 khoi_tu = 0
             else:
-                khoi_tu = prev_max + 1
+                khoi_tu = prev_max
                 
             CauHinhLoaiXe.objects.update_or_create(
                 loai_xe=loai_xe,
@@ -2629,6 +2629,13 @@ def api_import_base_prices_excel(request):
                     
             loai_xe_map[col_idx] = (loai_xe, so_khoi_str)
             prev_max = current_max
+            
+        # Update existing records with the new so_khoi strings
+        from core.models import GiaCoSo, DeXuatGiaCoSo
+        for col_idx, (loai_xe, so_khoi_str) in loai_xe_map.items():
+            if loai_xe != "LTL":
+                GiaCoSo.objects.filter(loai_xe=loai_xe).update(so_khoi=so_khoi_str)
+                DeXuatGiaCoSo.objects.filter(loai_xe=loai_xe).update(so_khoi=so_khoi_str)
         
         updated_count = 0
         created_count = 0
@@ -2678,11 +2685,19 @@ def api_import_base_prices_excel(request):
                         if gcs_created:
                             created_count += 1
                         else:
+                            changed = False
                             if gcs.gia_co_so != price:
                                 old_price = gcs.gia_co_so
                                 gcs.gia_co_so = price
                                 gcs.ngay_ap_dung = timezone.now()
                                 gcs._ly_do_doi = "Cập nhật hàng loạt qua Excel"
+                                changed = True
+                            
+                            if gcs.so_khoi != so_khoi:
+                                gcs.so_khoi = so_khoi
+                                changed = True
+                                
+                            if changed:
                                 gcs.save()
                                 updated_count += 1
                     except ValueError:
