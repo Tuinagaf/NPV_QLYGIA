@@ -1,20 +1,22 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
+# Thiết lập thư mục làm việc
 WORKDIR /app
 
+# Cài đặt các thư viện hệ thống cần thiết
 RUN apt-get update \
-    && apt-get install -y gcc libpq-dev \
+    && apt-get install -y gcc libffi-dev \
     && apt-get clean
 
-COPY requirements.txt /app/
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Cài đặt Python packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app/
+# Copy toàn bộ mã nguồn
+COPY . .
 
-EXPOSE 8000
+# Gom file tĩnh
+RUN python manage.py collectstatic --noinput
 
+# Khởi chạy Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "qlygia.wsgi:application"]

@@ -61,6 +61,21 @@
         transition: background 0.2s;
     }
     .btn-save:hover { background: #0369a1; }
+    
+    .modal-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .modal-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 15px;
+        }
+        .page-title { font-size: 1.4rem; }
+        form.glass-card { padding: 15px !important; }
+    }
 </style>
 
 <div style="flex: 1; overflow-y: auto; padding-right: 10px; padding-bottom: 30px;">
@@ -77,7 +92,7 @@
 <form method="post" id="account-form" class="glass-card" style="max-width: 800px; padding: 30px;">
     {% csrf_token %}
     
-    <div class="modal-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="modal-grid-2">
         <div class="form-group">
             <label class="form-label">Tên đăng nhập (Username) *</label>
             <input type="text" name="username" class="form-control" value="{{ edit_user.username }}" {% if edit_user %}readonly style="background: #f1f5f9; color: #64748b; cursor: not-allowed;"{% endif %} required>
@@ -112,7 +127,7 @@
     </p>
 
     {% if not edit_user or not edit_user.is_superuser %}
-    <div class="modal-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+    <div class="modal-grid-2" style="margin-bottom: 30px;">
         {% for p in core_permissions %}
         <label class="permission-item">
             <input type="checkbox" name="permissions[]" value="{{ p.id }}" class="perm-checkbox" data-action="{{ p.action }}" data-model="{{ p.model }}" {% if p.id in user_perms %}checked{% endif %}>
