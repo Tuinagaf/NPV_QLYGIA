@@ -111,7 +111,7 @@
                 const currentVal = soKhoiSelect.val();
                 soKhoiSelect.empty().append('<option value="">Tất cả</option>');
                 
-                const uniqueSoKhoi = new Set();
+                const uniqueSoKhoi = new Set(['0-6', '7-10', '11-14', '15-18', '19-28', '29-30', '31-35', '36-40', '>40', 'LTL']);
                 for (const khoi of Object.values(vehicleSettings)) {
                     if (khoi) uniqueSoKhoi.add(khoi);
                 }
