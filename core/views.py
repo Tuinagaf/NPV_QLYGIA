@@ -1212,13 +1212,14 @@ def export_single_partner_excel(partner):
     info_layout = [
         ("Mã nhà xe:", partner.ma_nha_xe or "", "Số điện thoại:", partner.so_dien_thoai or ""),
         ("Tên nhà xe:", partner.ten_nha_xe or "", "Zalo:", partner.ten_zalo or ""),
-        ("Địa chỉ:", partner.dia_chi or "", "Người đại diện:", partner.nguoi_dai_dien or ""),
-        ("Mã số thuế:", partner.ma_so_thue or "", "Địa chỉ HĐ:", partner.dia_chi_xuat_hoa_don or ""),
-        ("ĐV Xuất HĐ:", partner.ten_don_vi_xuat_hoa_don or "", "Ngân hàng:", partner.ngan_hang or ""),
-        ("Số tài khoản:", partner.so_tai_khoan or "", "Hợp đồng:", "Có" if partner.co_hop_dong else "Không"),
-        ("Sẵn sàng:", partner.tinh_san_sang or "", "Chất lượng:", partner.chat_luong or ""),
-        ("Hạn TT:", partner.thoi_han_thanh_toan or "", "Phí bốc xếp:", f"{partner.phi_boc_xep:,.0f}" if partner.phi_boc_xep else ""),
-        ("Phí rớt điểm:", f"{partner.phi_rot_diem:,.0f}" if partner.phi_rot_diem else "", "Ghi chú:", partner.ghi_chu or ""),
+        ("Địa chỉ:", partner.dia_chi or "", "Người quản lý:", partner.nguoi_quan_ly or ""),
+        ("Mã số thuế:", partner.ma_so_thue or "", "Người đại diện:", partner.nguoi_dai_dien or ""),
+        ("ĐV Xuất HĐ:", partner.ten_don_vi_xuat_hoa_don or "", "Địa chỉ HĐ:", partner.dia_chi_xuat_hoa_don or ""),
+        ("Số tài khoản:", partner.so_tai_khoan or "", "Ngân hàng:", partner.ngan_hang or ""),
+        ("Sẵn sàng:", partner.tinh_san_sang or "", "Hợp đồng:", "Có" if partner.co_hop_dong else "Không"),
+        ("Hạn TT:", partner.thoi_han_thanh_toan or "", "Chất lượng:", partner.chat_luong or ""),
+        ("Phí bốc xếp:", f"{partner.phi_boc_xep:,.0f}" if partner.phi_boc_xep else "", "Ghi chú:", partner.ghi_chu or ""),
+        ("Phí rớt điểm:", f"{partner.phi_rot_diem:,.0f}" if partner.phi_rot_diem else "", "", ""),
         ("Phí quá tải:", f"{partner.phi_di_qua_tai:,.0f}" if partner.phi_di_qua_tai else "", "", "")
     ]
     
@@ -1360,7 +1361,7 @@ def api_export_partners_excel(request):
         
         # Headers level 1
         headers_l1 = [
-            "STT", "Mã nhà xe", "Tên nhà xe", "Số điện thoại", "Địa chỉ", "Tên Zalo",
+            "STT", "Mã nhà xe", "Tên nhà xe", "Người quản lý", "Số điện thoại", "Địa chỉ", "Tên Zalo",
             "THÔNG TIN XUẤT HOÁ ĐƠN", "", "", "", "", "",
             "ĐÁNH GIÁ & THANH TOÁN", "", "", "", "",
             "CÁC LOẠI CHI PHÍ NHÀ XE", "", "",
@@ -1371,7 +1372,7 @@ def api_export_partners_excel(request):
         
         # Headers level 2
         headers_l2 = [
-            "STT", "Mã nhà xe", "Tên nhà xe", "Số điện thoại", "Địa chỉ", "Tên Zalo",
+            "STT", "Mã nhà xe", "Tên nhà xe", "Người quản lý", "Số điện thoại", "Địa chỉ", "Tên Zalo",
             "Tên đơn vị", "Địa chỉ HĐ", "Mã số thuế", "Số tài khoản", "Người đại diện", "Ngân hàng",
             "Thời hạn thanh toán", "Tính sẵn sàng", "Có hợp đồng không", "Chất lượng", "Ghi chú",
             "Phí rớt điểm", "Phí bốc xếp", "Phí đi quá tải",
@@ -1384,22 +1385,23 @@ def api_export_partners_excel(request):
         ws.append(headers_l2)
         
         # Merging level 1 headers
-        ws.merge_cells("A1:AG1")
-        ws.merge_cells("A2:AG2")
+        ws.merge_cells("A1:AH1")
+        ws.merge_cells("A2:AH2")
         
         ws.merge_cells("A4:A5") # STT
         ws.merge_cells("B4:B5") # MA
         ws.merge_cells("C4:C5") # TAn
-        ws.merge_cells("D4:D5") # So dien thoai
-        ws.merge_cells("E4:E5") # Dia chi
-        ws.merge_cells("F4:F5") # Ten Zalo
+        ws.merge_cells("D4:D5") # Nguoi quan ly
+        ws.merge_cells("E4:E5") # So dien thoai
+        ws.merge_cells("F4:F5") # Dia chi
+        ws.merge_cells("G4:G5") # Ten Zalo
         
-        ws.merge_cells("G4:L4") # Hoa don
-        ws.merge_cells("M4:Q4") # Danh gia
-        ws.merge_cells("R4:T4") # Chi phi
-        ws.merge_cells("U4:X4") # Tuyen xe
-        ws.merge_cells("Y4:AF4") # Nang luc
-        ws.merge_cells("AG4:AG5") # Muc gia
+        ws.merge_cells("H4:M4") # Hoa don
+        ws.merge_cells("N4:R4") # Danh gia
+        ws.merge_cells("S4:U4") # Chi phi
+        ws.merge_cells("V4:Y4") # Tuyen xe
+        ws.merge_cells("Z4:AG4") # Nang luc
+        ws.merge_cells("AH4:AH5") # Muc gia
         
         title_font = Font(size=16, bold=True, color="FF0000")
         subtitle_font = Font(size=14, bold=True, color="0000FF")
@@ -1436,7 +1438,7 @@ def api_export_partners_excel(request):
             
             if not routes.exists():
                 row_data = [
-                    stt, p.ma_nha_xe, p.ten_nha_xe, getattr(p, 'so_dien_thoai', ''), p.dia_chi, getattr(p, 'ten_zalo', ''),
+                    stt, p.ma_nha_xe, p.ten_nha_xe, getattr(p, 'nguoi_quan_ly', ''), getattr(p, 'so_dien_thoai', ''), p.dia_chi, getattr(p, 'ten_zalo', ''),
                     p.ten_don_vi_xuat_hoa_don, p.dia_chi_xuat_hoa_don, p.ma_so_thue, p.so_tai_khoan, p.nguoi_dai_dien, p.ngan_hang,
                     p.thoi_han_thanh_toan, p.tinh_san_sang, p_co_hop_dong, p.chat_luong, p.ghi_chu,
                     p.phi_rot_diem, p.phi_boc_xep, p.phi_di_qua_tai,
@@ -1450,7 +1452,7 @@ def api_export_partners_excel(request):
                     c.border = thin_border
                     c.alignment = Alignment(vertical="center", wrap_text=True)
                     c.fill = current_fill
-                    if col_num in [18, 19, 20, 33]: 
+                    if col_num in [19, 20, 21, 34]: 
                         c.number_format = '#,##0'
                         c.alignment = Alignment(vertical="center", horizontal="right")
                 row_idx += 1
@@ -1462,7 +1464,7 @@ def api_export_partners_excel(request):
                     qua_tai = "Có" if r.co_chiu_qua_tai_khong else "Không"
                     
                     row_data = [
-                        stt, p.ma_nha_xe, p.ten_nha_xe, getattr(p, 'so_dien_thoai', ''), p.dia_chi, getattr(p, 'ten_zalo', ''),
+                        stt, p.ma_nha_xe, p.ten_nha_xe, getattr(p, 'nguoi_quan_ly', ''), getattr(p, 'so_dien_thoai', ''), p.dia_chi, getattr(p, 'ten_zalo', ''),
                         p.ten_don_vi_xuat_hoa_don, p.dia_chi_xuat_hoa_don, p.ma_so_thue, p.so_tai_khoan, p.nguoi_dai_dien, p.ngan_hang,
                         p.thoi_han_thanh_toan, p.tinh_san_sang, p_co_hop_dong, p.chat_luong, p.ghi_chu,
                         p.phi_rot_diem, p.phi_boc_xep, p.phi_di_qua_tai,
@@ -1477,7 +1479,7 @@ def api_export_partners_excel(request):
                         c.border = thin_border
                         c.alignment = Alignment(vertical="center", wrap_text=True)
                         c.fill = current_fill
-                        if col_num in [18, 19, 20, 33]: 
+                        if col_num in [19, 20, 21, 34]: 
                             c.number_format = '#,##0'
                             c.alignment = Alignment(vertical="center", horizontal="right")
                     row_idx += 1
@@ -1600,7 +1602,7 @@ def api_export_partner_template(request):
         
         # Headers level 1
         headers_l1 = [
-            "STT", "Mã nhà xe", "Tên nhà xe", "Số điện thoại", "Địa chỉ", "Tên Zalo",
+            "STT", "Mã nhà xe", "Tên nhà xe", "Người quản lý", "Số điện thoại", "Địa chỉ", "Tên Zalo",
             "THÔNG TIN XUẤT HOÁ ĐƠN", "", "", "", "", "",
             "ĐÁNH GIÁ & THANH TOÁN", "", "", "", "",
             "CÁC LOẠI CHI PHÍ NHÀ XE", "", "",
@@ -1611,7 +1613,7 @@ def api_export_partner_template(request):
         
         # Headers level 2
         headers_l2 = [
-            "STT", "Mã nhà xe", "Tên nhà xe", "Số điện thoại", "Địa chỉ", "Tên Zalo",
+            "STT", "Mã nhà xe", "Tên nhà xe", "Người quản lý", "Số điện thoại", "Địa chỉ", "Tên Zalo",
             "Tên đơn vị", "Địa chỉ HĐ", "Mã số thuế", "Số tài khoản", "Người đại diện", "Ngân hàng",
             "Thời hạn thanh toán", "Tính sẵn sàng", "Có hợp đồng không", "Chất lượng", "Ghi chú",
             "Phí rớt điểm", "Phí bốc xếp", "Phí đi quá tải",
@@ -1623,23 +1625,24 @@ def api_export_partner_template(request):
         ws.append(headers_l1)
         ws.append(headers_l2)
         
-        ws.merge_cells("A1:AG1")
-        ws.merge_cells("A2:AG2")
-        ws.merge_cells("A3:AG3")
+        ws.merge_cells("A1:AH1")
+        ws.merge_cells("A2:AH2")
+        ws.merge_cells("A3:AH3")
         
         ws.merge_cells("A4:A5") # STT
         ws.merge_cells("B4:B5") # MA
         ws.merge_cells("C4:C5") # TAn
-        ws.merge_cells("D4:D5") # So dien thoai
-        ws.merge_cells("E4:E5") # Dia chi
-        ws.merge_cells("F4:F5") # Ten Zalo
+        ws.merge_cells("D4:D5") # Nguoi quan ly
+        ws.merge_cells("E4:E5") # So dien thoai
+        ws.merge_cells("F4:F5") # Dia chi
+        ws.merge_cells("G4:G5") # Ten Zalo
         
-        ws.merge_cells("G4:L4") # Hoa don
-        ws.merge_cells("M4:Q4") # Danh gia
-        ws.merge_cells("R4:T4") # Chi phi
-        ws.merge_cells("U4:X4") # Tuyen xe
-        ws.merge_cells("Y4:AF4") # Nang luc
-        ws.merge_cells("AG4:AG5") # Muc gia
+        ws.merge_cells("H4:M4") # Hoa don
+        ws.merge_cells("N4:R4") # Danh gia
+        ws.merge_cells("S4:U4") # Chi phi
+        ws.merge_cells("V4:Y4") # Tuyen xe
+        ws.merge_cells("Z4:AG4") # Nang luc
+        ws.merge_cells("AH4:AH5") # Muc gia
         
         title_font = Font(size=16, bold=True, color="FF0000")
         subtitle_font = Font(size=14, bold=True, color="0000FF")
@@ -1675,8 +1678,8 @@ def api_export_partner_template(request):
         dv_province = DataValidation(type="list", formula1="=Provinces", allow_blank=True)
         
         # Note: INDIRECT needs cell reference without absolute, but openpyxl applies it correctly to a range
-        dv_district_nhan = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(U6, " ", ""), "-", ""), ".", ""))', allow_blank=True)
-        dv_district_giao = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(W6, " ", ""), "-", ""), ".", ""))', allow_blank=True)
+        dv_district_nhan = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(V6, " ", ""), "-", ""), ".", ""))', allow_blank=True)
+        dv_district_giao = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(X6, " ", ""), "-", ""), ".", ""))', allow_blank=True)
         
         ws.add_data_validation(dv_sansang)
         ws.add_data_validation(dv_cokhong)
@@ -1688,27 +1691,27 @@ def api_export_partner_template(request):
         ws.add_data_validation(dv_district_nhan)
         ws.add_data_validation(dv_district_giao)
         
-        dv_sansang.add("N6:N1000")
-        dv_cokhong.add("O6:O1000")
-        dv_cokhong.add("Z6:Z1000")
+        dv_sansang.add("O6:O1000")
+        dv_cokhong.add("P6:P1000")
         dv_cokhong.add("AA6:AA1000")
         dv_cokhong.add("AB6:AB1000")
-        dv_sochieudi.add("Y6:Y1000")
-        dv_taitrong.add("AC6:AC1000")
-        dv_sokhoi.add("AD6:AD1000")
-        dv_loaithung.add("AF6:AF1000")
-        dv_province.add("U6:U1000")
-        dv_province.add("W6:W1000")
-        dv_district_nhan.add("V6:V1000")
-        dv_district_giao.add("X6:X1000")
+        dv_cokhong.add("AC6:AC1000")
+        dv_sochieudi.add("Z6:Z1000")
+        dv_taitrong.add("AD6:AD1000")
+        dv_sokhoi.add("AE6:AE1000")
+        dv_loaithung.add("AG6:AG1000")
+        dv_province.add("V6:V1000")
+        dv_province.add("X6:X1000")
+        dv_district_nhan.add("W6:W1000")
+        dv_district_giao.add("Y6:Y1000")
 
-        widths = [5, 15, 25, 15, 25, 15, 25, 30, 15, 15, 15, 15, 15, 12, 12, 10, 20, 15, 15, 15, 15, 15, 15, 15, 12, 12, 12, 12, 15, 10, 20, 15, 15]
+        widths = [5, 15, 25, 20, 15, 25, 15, 25, 30, 15, 15, 15, 15, 15, 12, 12, 10, 20, 15, 15, 15, 15, 15, 15, 15, 12, 12, 12, 12, 15, 10, 20, 15, 15]
         for col_idx, width in enumerate(widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
             
-        # Format empty rows for prices (columns 18, 19, 20, 33)
+        # Format empty rows for prices (columns 19, 20, 21, 34)
         for row in range(6, 1001):
-            for col in [18, 19, 20, 33]:
+            for col in [19, 20, 21, 34]:
                 c = ws.cell(row=row, column=col)
                 c.number_format = '#,##0'
                 c.alignment = Alignment(horizontal='right', vertical='center')
@@ -1753,20 +1756,21 @@ def api_import_partners_excel(request):
             if not any(row): continue
             
             # Map columns according to new headers_l2
-            # 1: Mã, 2: Tên, 3: Địa chỉ, 4: Tên Zalo
-            # 5: Tên đv, 6: Địa chỉ HĐ, 7: MST, 8: Số TK, 9: Ng đại diện, 10: Ngân hàng
-            # 11: Thời hạn TT, 12: Tính sẵn sàng, 13: Có HĐ, 14: Chất lượng, 15: Ghi chú
-            # 16: Phí rớt, 17: Phí bốc xếp, 18: Phí quá tải
-            # 19: Tỉnh nhận, 20: Huyện nhận, 21: Tỉnh giao, 22: Huyện giao
-            # 23: Số chiều đi, 24: Nhiều điểm, 25: Ghép hàng, 26: Chịu quá tải
-            # 27: Tải trọng, 28: Số khối, 29: Kích thước, 30: Loại thùng, 31: Mức giá
+            # 1: Mã, 2: Tên, 3: Người quản lý, 4: Số ĐT, 5: Địa chỉ, 6: Tên Zalo
+            # 7: Tên đv, 8: Địa chỉ HĐ, 9: MST, 10: Số TK, 11: Ng đại diện, 12: Ngân hàng
+            # 13: Thời hạn TT, 14: Tính sẵn sàng, 15: Có HĐ, 16: Chất lượng, 17: Ghi chú
+            # 18: Phí rớt, 19: Phí bốc xếp, 20: Phí quá tải
+            # 21: Tỉnh nhận, 22: Huyện nhận, 23: Tỉnh giao, 24: Huyện giao
+            # 25: Số chiều đi, 26: Nhiều điểm, 27: Ghép hàng, 28: Chịu quá tải
+            # 29: Tải trọng, 30: Số khối, 31: Kích thước, 32: Loại thùng, 33: Mức giá
             
             ma_nha_xe_input = str(row[1]).strip() if len(row) > 1 and row[1] else None
             if ma_nha_xe_input and ma_nha_xe_input.lower() == 'none': ma_nha_xe_input = None
             
-            so_dien_thoai_input = str(row[3]).strip() if len(row) > 3 and row[3] else None
+            nguoi_quan_ly_input = str(row[3]).strip() if len(row) > 3 and row[3] else None
+            so_dien_thoai_input = str(row[4]).strip() if len(row) > 4 and row[4] else None
             
-            ma_so_thue_input = str(row[8]).strip() if len(row) > 8 and row[8] else None
+            ma_so_thue_input = str(row[9]).strip() if len(row) > 9 and row[9] else None
             mst_clean = ""
             if ma_so_thue_input:
                 mst_clean = ma_so_thue_input.replace('-', '').replace(' ', '')
@@ -1787,7 +1791,9 @@ def api_import_partners_excel(request):
             if not p:
                 p = DoiTac()
                 if not request.user.is_superuser:
-                    p.nguoi_quan_ly = request.user.username
+                    p.nguoi_quan_ly = nguoi_quan_ly_input if nguoi_quan_ly_input else request.user.username
+                else:
+                    if nguoi_quan_ly_input: p.nguoi_quan_ly = nguoi_quan_ly_input
                 count_partner += 1
                 
             # Assign ma_nha_xe directly
@@ -1799,48 +1805,49 @@ def api_import_partners_excel(request):
             
             if partner_key not in partner_map:
                 if len(row) > 2 and row[2]: p.ten_nha_xe = str(row[2]).strip()
+                if request.user.is_superuser and nguoi_quan_ly_input: p.nguoi_quan_ly = nguoi_quan_ly_input
                 if so_dien_thoai_input: p.so_dien_thoai = so_dien_thoai_input
-                if len(row) > 4 and row[4]: p.dia_chi = str(row[4]).strip()
-                if len(row) > 5 and row[5]: p.ten_zalo = str(row[5]).strip()
-                if len(row) > 6 and row[6]: p.ten_don_vi_xuat_hoa_don = str(row[6]).strip()
-                if len(row) > 7 and row[7]: p.dia_chi_xuat_hoa_don = str(row[7]).strip()
+                if len(row) > 5 and row[5]: p.dia_chi = str(row[5]).strip()
+                if len(row) > 6 and row[6]: p.ten_zalo = str(row[6]).strip()
+                if len(row) > 7 and row[7]: p.ten_don_vi_xuat_hoa_don = str(row[7]).strip()
+                if len(row) > 8 and row[8]: p.dia_chi_xuat_hoa_don = str(row[8]).strip()
                 if mst_clean: p.ma_so_thue = mst_clean
-                if len(row) > 9 and row[9]: p.so_tai_khoan = str(row[9]).strip()
-                if len(row) > 10 and row[10]: p.nguoi_dai_dien = str(row[10]).strip()
-                if len(row) > 11 and row[11]: p.ngan_hang = str(row[11]).strip()
+                if len(row) > 10 and row[10]: p.so_tai_khoan = str(row[10]).strip()
+                if len(row) > 11 and row[11]: p.nguoi_dai_dien = str(row[11]).strip()
+                if len(row) > 12 and row[12]: p.ngan_hang = str(row[12]).strip()
                 
-                if len(row) > 12 and row[12]: p.thoi_han_thanh_toan = str(row[12]).strip()
-                if len(row) > 13 and row[13]: p.tinh_san_sang = str(row[13]).strip()
+                if len(row) > 13 and row[13]: p.thoi_han_thanh_toan = str(row[13]).strip()
+                if len(row) > 14 and row[14]: p.tinh_san_sang = str(row[14]).strip()
                 
-                co_hd = str(row[14]).strip().lower() if len(row) > 14 and row[14] else ""
+                co_hd = str(row[15]).strip().lower() if len(row) > 15 and row[15] else ""
                 p.co_hop_dong = "cA3" in co_hd or "co" in co_hd
                 
-                if len(row) > 15 and row[15]:
-                    try: p.chat_luong = int(row[15])
-                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Chất lượng "{row[15]}" không hợp lệ (phải là số).'})
+                if len(row) > 16 and row[16]:
+                    try: p.chat_luong = int(row[16])
+                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Chất lượng "{row[16]}" không hợp lệ (phải là số).'})
                 
-                if len(row) > 16 and row[16]: p.ghi_chu = str(row[16]).strip()
+                if len(row) > 17 and row[17]: p.ghi_chu = str(row[17]).strip()
                 
-                if len(row) > 17 and row[17]:
-                    try: p.phi_rot_diem = float(row[17])
-                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí rớt điểm "{row[17]}" không hợp lệ (phải là số).'})
                 if len(row) > 18 and row[18]:
-                    try: p.phi_boc_xep = float(row[18])
-                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí bốc xếp "{row[18]}" không hợp lệ (phải là số).'})
+                    try: p.phi_rot_diem = float(row[18])
+                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí rớt điểm "{row[18]}" không hợp lệ (phải là số).'})
                 if len(row) > 19 and row[19]:
-                    try: p.phi_di_qua_tai = float(row[19])
-                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí đi quá tải "{row[19]}" không hợp lệ (phải là số).'})
+                    try: p.phi_boc_xep = float(row[19])
+                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí bốc xếp "{row[19]}" không hợp lệ (phải là số).'})
+                if len(row) > 20 and row[20]:
+                    try: p.phi_di_qua_tai = float(row[20])
+                    except: return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Phí đi quá tải "{row[20]}" không hợp lệ (phải là số).'})
                 
                 p.save()
             
             # Now add route
-            if len(row) > 20 and any(row[20:33]):
-                tinh_nhan = str(row[20]).strip() if len(row) > 20 and row[20] else None
-                tinh_giao = str(row[22]).strip() if len(row) > 22 and row[22] else None
+            if len(row) > 21 and any(row[21:34]):
+                tinh_nhan = str(row[21]).strip() if len(row) > 21 and row[21] else None
+                tinh_giao = str(row[23]).strip() if len(row) > 23 and row[23] else None
                 
                 if tinh_nhan and tinh_giao and str(tinh_nhan).lower() != 'none' and str(tinh_giao).lower() != 'none':
-                    huyen_nhan = str(row[21]).strip() if len(row) > 21 and row[21] else ""
-                    huyen_giao = str(row[23]).strip() if len(row) > 23 and row[23] else ""
+                    huyen_nhan = str(row[22]).strip() if len(row) > 22 and row[22] else ""
+                    huyen_giao = str(row[24]).strip() if len(row) > 24 and row[24] else ""
                     if huyen_nhan.lower() == 'none': huyen_nhan = ""
                     if huyen_giao.lower() == 'none': huyen_giao = ""
                     
@@ -1866,19 +1873,19 @@ def api_import_partners_excel(request):
                     if not bg:
                         bg = BaoGiaThongTinXe(doi_tac=p, tuyen=tuyen)
                         
-                    chieu_di = str(row[24]).strip().lower() if len(row) > 24 and row[24] else ""
+                    chieu_di = str(row[25]).strip().lower() if len(row) > 25 and row[25] else ""
                     bg.di_1_hay_2_chieu = 2 if "2" in chieu_di else 1
                     
-                    n_diem = str(row[25]).strip().lower() if len(row) > 25 and row[25] else ""
+                    n_diem = str(row[26]).strip().lower() if len(row) > 26 and row[26] else ""
                     bg.co_di_nhieu_diem_khong = "có" in n_diem or "co" in n_diem
                     
-                    g_hang = str(row[26]).strip().lower() if len(row) > 26 and row[26] else ""
+                    g_hang = str(row[27]).strip().lower() if len(row) > 27 and row[27] else ""
                     bg.co_ghep_hang_khong = "có" in g_hang or "co" in g_hang
                     
-                    q_tai = str(row[27]).strip().lower() if len(row) > 27 and row[27] else ""
+                    q_tai = str(row[28]).strip().lower() if len(row) > 28 and row[28] else ""
                     bg.co_chiu_qua_tai_khong = "có" in q_tai or "co" in q_tai
                     
-                    tt = str(row[28]).strip() if len(row) > 28 and row[28] else ""
+                    tt = str(row[29]).strip() if len(row) > 29 and row[29] else ""
                     import re
                     nums = re.findall(r"[-+]?\d*\.\d+|\d+", tt)
                     if nums:
@@ -1886,15 +1893,15 @@ def api_import_partners_excel(request):
                     else:
                         bg.tai_trong_tan = 0.0
                     
-                    bg.so_khoi = str(row[29]).strip() if len(row) > 29 and row[29] and str(row[29]).lower() != 'none' else ""
-                    bg.kich_thuoc = str(row[30]).strip() if len(row) > 30 and row[30] and str(row[30]).lower() != 'none' else ""
-                    bg.loai_thung = str(row[31]).strip() if len(row) > 31 and row[31] and str(row[31]).lower() != 'none' else ""
+                    bg.so_khoi = str(row[30]).strip() if len(row) > 30 and row[30] and str(row[30]).lower() != 'none' else ""
+                    bg.kich_thuoc = str(row[31]).strip() if len(row) > 31 and row[31] and str(row[31]).lower() != 'none' else ""
+                    bg.loai_thung = str(row[32]).strip() if len(row) > 32 and row[32] and str(row[32]).lower() != 'none' else ""
                     
-                    if len(row) > 32 and row[32]:
+                    if len(row) > 33 and row[33]:
                         try: 
-                            bg.muc_gia_chap_nhan = float(row[32])
+                            bg.muc_gia_chap_nhan = float(row[33])
                         except: 
-                            return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Mức giá "{row[32]}" không hợp lệ (phải là số).'})
+                            return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Mức giá "{row[33]}" không hợp lệ (phải là số).'})
                     else:
                         bg.muc_gia_chap_nhan = 0.0
                     
