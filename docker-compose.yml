@@ -5,7 +5,9 @@ services:
     volumes:
       - .:/app
     ports:
-      - "80:8000"  # Map port 80 of EC2 to port 8000 of container
+      # Chỉ lắng nghe nội bộ trên máy chủ, KHÔNG mở ra internet trực tiếp.
+      # Nginx sẽ là cổng duy nhất tiếp nhận từ internet (port 80 và 443).
+      - "127.0.0.1:8000:8000"
     environment:
       - SECRET_KEY=django-production-secret-key-npv-qlygia-2026
       - DEBUG=False
