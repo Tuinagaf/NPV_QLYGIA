@@ -79,8 +79,12 @@
                         <button class="btn-action btn-reject" onclick="rejectProposal({{ p.id }})" style="margin-left: 5px;">Từ chối</button>
                         {% endif %}
                         {% if p.nguoi_de_xuat == user.username %}
+                        {% if perms.core.change_dexuatgiacoso %}
                         <button class="btn-action" style="background: #3b82f6; margin-left: 5px;" onclick="openEditModal({{ p.id }}, '{{ p.tuyen.tinh_nhan }}', '{{ p.tuyen.huyen_nhan|default:'' }}', '{{ p.tuyen.tinh_giao }}', '{{ p.tuyen.huyen_giao|default:'' }}', '{{ p.loai_xe }}', '{{ p.so_khoi|default:'' }}', '{{ p.gia_de_xuat|floatformat:0 }}', '{{ p.ly_do_de_xuat|escapejs }}')">Sửa</button>
+                        {% endif %}
+                        {% if perms.core.delete_dexuatgiacoso %}
                         <button class="btn-action" style="background: #ef4444; margin-left: 5px;" onclick="deleteProposal({{ p.id }})">Xóa</button>
+                        {% endif %}
                         {% endif %}
                     {% elif user.is_superuser and p.can_undo %}
                         <button class="btn-action" style="background: #f59e0b; margin-left: 5px;" onclick="undoProposal({{ p.id }})">Hoàn tác</button>

@@ -250,7 +250,7 @@ def partner_detail(request, pk):
             
     can_edit = False
     if request.user.is_authenticated:
-        can_edit = request.user.is_superuser or partner.nguoi_quan_ly == request.user.username
+        can_edit = request.user.has_perm('core.change_doitac') and (request.user.is_superuser or partner.nguoi_quan_ly == request.user.username)
             
     today = timezone.now().date()
             

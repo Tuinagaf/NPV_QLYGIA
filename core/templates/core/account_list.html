@@ -7,7 +7,9 @@
         <p style="color: var(--text-muted); margin: 0;">Quản trị tài khoản đăng nhập và phân quyền</p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        {% if perms.auth.add_user %}
         <a href="{% url 'account_create' %}" style="background: var(--primary-color); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">+ Tạo Tài Khoản</a>
+        {% endif %}
     </div>
 </div>
 
@@ -47,8 +49,10 @@
                     </td>
                     <td style="padding: 15px 20px; color: #475569;">{{ u.date_joined|date:"d/m/Y" }}</td>
                     <td style="padding: 15px 20px; text-align: right;">
+                        {% if perms.auth.change_user %}
                         <a href="{% url 'account_update' u.id %}" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem; font-weight: 600; margin-right: 15px;">Sửa</a>
-                        {% if not u.is_superuser %}
+                        {% endif %}
+                        {% if not u.is_superuser and perms.auth.delete_user %}
                         <button type="button" onclick="deleteAccount({{ u.id }}, '{{ u.username }}')" style="color: #ef4444; background: none; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer;">Xóa</button>
                         {% endif %}
                     </td>
