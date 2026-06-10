@@ -270,33 +270,13 @@
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tải trọng (Tấn)</label>
-                        <select name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-select" required>
-                            <option value="">Chọn tải trọng</option>
-                            <option value="1.25">1.25 Tấn</option>
-                            <option value="2">2 Tấn</option>
-                            <option value="3.5">3.5 Tấn</option>
-                            <option value="5">5 Tấn</option>
-                            <option value="7">7 Tấn</option>
-                            <option value="9">9 Tấn</option>
-                            <option value="11">11 Tấn</option>
-                            <option value="15">15 Tấn</option>
-                            <option value="LTL">LTL</option>
-                        </select>
+                        <input type="text" name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-input" list="taiTrongList" placeholder="Chọn hoặc nhập..." required onchange="handleTaiTrongChange(this)">
+                        <datalist id="taiTrongList"></datalist>
                     </div>
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Số khối</label>
-                        <select name="so_khoi[]" class="form-control form-control-sm so-khoi-select" required>
-                            <option value="">Chọn số khối</option>
-                            <option value="0-6">0-6</option>
-                            <option value="7-10">7-10</option>
-                            <option value="11-14">11-14</option>
-                            <option value="15-18">15-18</option>
-                            <option value="19-28">19-28</option>
-                            <option value="29-30">29-30</option>
-                            <option value="31-35">31-35</option>
-                            <option value="36-40">36-40</option>
-                            <option value="LTL">LTL</option>
-                        </select>
+                        <input type="text" name="so_khoi[]" class="form-control form-control-sm so-khoi-input" list="soKhoiList" placeholder="Chọn hoặc nhập..." required>
+                        <datalist id="soKhoiList"></datalist>
                     </div>
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Kích thước (DxRxC)</label>
@@ -345,49 +325,30 @@
 <script>
     let provincesData = [];
     
-    function syncKhongTrongFormset(selectElement, type) {
-        let block = selectElement.closest('.route-block');
-        let taiTrongSel = block.querySelector('.tai-trong-select');
-        let soKhoiSel = block.querySelector('.so-khoi-select');
+    async function fetchBasePriceForFormset(block) {
+        let tn = block.querySelector('select[name="tinh_nhan[]"]')?.value;
+        let tg = block.querySelector('select[name="tinh_giao[]"]')?.value;
+        let lxVal = block.querySelector('input[name="tai_trong_tan[]"]')?.value;
+        let gcsDisplay = block.querySelector('.gcs-display');
         
-        const mapping = {
-            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
-            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'LTL': 'LTL'
-        };
-        const revMapping = {
-            '0-6': '1.25', '7-10': '2', '11-14': '3.5', '15-18': '5',
-            '19-28': '7', '29-30': '9', '31-35': '11', '36-40': '15', 'LTL': 'LTL'
-        };
-        
-        let val = selectElement.value;
-        if (!val) return;
-        
-        if (type === 'tan') {
-            if (mapping[val] && $(soKhoiSel).val() !== mapping[val]) {
-                $(soKhoiSel).val(mapping[val]).trigger('change.select2');
-            }
-        } else {
-            if (revMapping[val] && $(taiTrongSel).val() !== revMapping[val]) {
-                $(taiTrongSel).val(revMapping[val]).trigger('change.select2');
-            }
+        if (!tn || !tg || !lxVal) {
+            if (gcsDisplay) gcsDisplay.innerHTML = '';
+            return;
         }
+        
+        let lxStr = lxVal + 'T';
+        try {
+            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lxStr)}`);
+            const data = await res.json();
+            if (data.success && data.gia_co_so) {
+                gcsDisplay.innerHTML = `<span style="color:#0284c7; font-weight:600;" data-gcs="${data.gia_co_so}">GCS: ${Number(data.gia_co_so).toLocaleString('vi-VN')} đ</span>`;
+            } else {
+                gcsDisplay.innerHTML = '<span style="color:#94a3b8;" data-gcs="">Chưa có GCS</span>';
+            }
+            updatePriceColor(block);
+        } catch(e) {}
     }
-    
-    $(document).on('change', '.tai-trong-select', function() {
-        syncKhongTrongFormset(this, 'tan');
-    });
-    $(document).on('change', '.so-khoi-select', function() {
-        syncKhongTrongFormset(this, 'khoi');
-    });
-    
-    function toggleAdvancedRow(el) {
-        let block = el.closest('tbody');
-        let advRow = block.querySelector('.advanced-row');
-        if (advRow) {
-            advRow.style.display = (advRow.style.display === 'none') ? 'table-row' : 'none';
-        }
-    }
-    
+
     // API Logic
     async function loadProvinces() {
         try {
@@ -448,38 +409,6 @@
         }
     }
 
-    async function fetchBasePriceForFormset(block) {
-        let tn = block.querySelector('select[name="tinh_nhan[]"]')?.value;
-        let tg = block.querySelector('select[name="tinh_giao[]"]')?.value;
-        let lxVal = block.querySelector('select[name="tai_trong_tan[]"]')?.value;
-        let gcsDisplay = block.querySelector('.gcs-display');
-        
-        if (!tn || !tg || !lxVal) {
-            if (gcsDisplay) gcsDisplay.innerHTML = '';
-            return;
-        }
-        
-        let lxStr = lxVal + 'T';
-        if (!lxVal.includes('.')) {
-            lxStr = parseInt(lxVal) + 'T';
-        } else if (lxVal === '1.25') {
-            lxStr = '1.25T';
-        } else {
-            lxStr = parseFloat(lxVal) + 'T';
-        }
-        
-        try {
-            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lxStr)}`);
-            const data = await res.json();
-            if (data.success && data.gia_co_so) {
-                gcsDisplay.innerHTML = `<span style="color:#0284c7; font-weight:600;" data-gcs="${data.gia_co_so}">GCS: ${Number(data.gia_co_so).toLocaleString('vi-VN')} đ</span>`;
-            } else {
-                gcsDisplay.innerHTML = '<span style="color:#94a3b8;" data-gcs="">Chưa có GCS</span>';
-            }
-            updatePriceColor(block);
-        } catch(e) {}
-    }
-
     function updatePriceColor(block) {
         let priceInput = block.querySelector('input[name="muc_gia_chap_nhan[]"]');
         let gcsSpan = block.querySelector('.gcs-display span');
@@ -508,7 +437,6 @@
         if (block) updatePriceColor(block);
     });
 
-    // Cần dùng jQuery for event delegation cho select2 thay vì native event nếu user tương tác qua select2
     $(document).on('change', '.province-select', function(e) {
         let block = e.target.closest('.route-block');
         let isNhan = e.target.name === 'tinh_nhan[]';
@@ -520,21 +448,21 @@
     });
 
     $(document).on('change', 'select', function(e) {
-        if (['tinh_nhan[]', 'tinh_giao[]', 'tai_trong_tan[]', 'so_khoi[]'].includes(e.target.name)) {
+        if (['tinh_nhan[]', 'tinh_giao[]'].includes(e.target.name)) {
             let block = e.target.closest('.route-block');
             if (block) fetchBasePriceForFormset(block);
         }
+    });
+    
+    $(document).on('input', 'input[name="tai_trong_tan[]"]', function(e) {
+        let block = e.target.closest('.route-block');
+        if (block) fetchBasePriceForFormset(block);
     });
 
     function showFormsetSection() {
         document.getElementById('route-formset-section').style.display = 'block';
         document.getElementById('add-route-toggle-container').style.display = 'none';
-        
-        // Thêm tuyến đầu tiên
         addFormsetRow();
-        
-        // Không tự động cuộn trang
-        // document.getElementById('route-formset-section').scrollIntoView({ behavior: 'smooth' });
     }
 
     async function deleteRoute(routeId, btn) {
@@ -584,7 +512,6 @@
         
         var newBlock = document.querySelector('#new-routes-container').lastElementChild;
         
-        // Ẩn dòng "Chưa có tuyến nào" nếu có
         var noRoutesRow = document.getElementById('no-routes-row');
         if (noRoutesRow) {
             noRoutesRow.style.display = 'none';
@@ -601,9 +528,6 @@
                 $(this).select2({ width: '100%' });
             }
         });
-        
-        // Không tự động cuộn trang để tránh làm thanh cuộn bị chạy
-        // newBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     document.addEventListener("DOMContentLoaded", async function() {
@@ -616,12 +540,10 @@
         
         var newRoutesData = {{ new_routes_data_json|safe|default:"[]" }};
         
-        // Hiển thị nút thêm tuyến đầu tiên cho đối tác mới (không có tuyến)
         if (existingRows === 0 && !errors && !shouldAddRoute && newRoutesData.length === 0) {
             document.getElementById('add-route-toggle-container').style.display = 'block';
         }
         
-        // Khôi phục dữ liệu tuyến mới nếu có lỗi
         if (newRoutesData.length > 0) {
             document.getElementById('route-formset-section').style.display = 'block';
             document.getElementById('add-route-toggle-container').style.display = 'none';
@@ -637,9 +559,11 @@
                 
                 populateProvinceSelect($(newBlock).find('select[name="tinh_nhan[]"]')[0]);
                 populateProvinceSelect($(newBlock).find('select[name="tinh_giao[]"]')[0]);
+                $(newBlock).find('select[name="huyen_nhan[]"]').val(route.huyen_nhan).trigger('change');
+                $(newBlock).find('select[name="huyen_giao[]"]').val(route.huyen_giao).trigger('change');
                 
-                $(newBlock).find('select[name="tai_trong_tan[]"]').val(route.tai_trong_tan).trigger('change');
-                $(newBlock).find('select[name="so_khoi[]"]').val(route.so_khoi).trigger('change');
+                $(newBlock).find('input[name="tai_trong_tan[]"]').val(route.tai_trong_tan).trigger('change');
+                $(newBlock).find('input[name="so_khoi[]"]').val(route.so_khoi).trigger('change');
                 $(newBlock).find('input[name="kich_thuoc[]"]').val(route.kich_thuoc);
                 $(newBlock).find('select[name="loai_thung[]"]').val(route.loai_thung).trigger('change');
                 $(newBlock).find('input[name="muc_gia_chap_nhan[]"]').val(route.muc_gia_chap_nhan);
@@ -722,8 +646,8 @@
                         huyen_nhan: block.querySelector('select[name="huyen_nhan[]"]').value,
                         tinh_giao: block.querySelector('select[name="tinh_giao[]"]').value,
                         huyen_giao: block.querySelector('select[name="huyen_giao[]"]').value,
-                        tai_trong_tan: block.querySelector('select[name="tai_trong_tan[]"]').value,
-                        so_khoi: block.querySelector('select[name="so_khoi[]"]').value,
+                        tai_trong_tan: block.querySelector('input[name="tai_trong_tan[]"]').value,
+                        so_khoi: block.querySelector('input[name="so_khoi[]"]').value,
                         kich_thuoc: block.querySelector('input[name="kich_thuoc[]"]').value,
                         loai_thung: block.querySelector('select[name="loai_thung[]"]').value,
                         co_ghep_hang_khong: block.querySelector('select[name="co_ghep_hang_khong[]"]').value,

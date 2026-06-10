@@ -219,3 +219,16 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+class CauHinhLoaiXe(models.Model):
+    loai_xe = models.CharField(max_length=50, unique=True, verbose_name="Loại xe (Tấn)")
+    so_khoi_mac_dinh = models.CharField(max_length=50, blank=True, null=True, verbose_name="Số khối mặc định")
+    thu_tu = models.IntegerField(default=0, verbose_name="Thứ tự hiển thị")
+
+    class Meta:
+        verbose_name = "Cấu hình Loại xe & Số khối"
+        verbose_name_plural = "Cấu hình Loại xe & Số khối"
+        ordering = ['thu_tu', 'loai_xe']
+
+    def __str__(self):
+        return f"{self.loai_xe} -> {self.so_khoi_mac_dinh}"

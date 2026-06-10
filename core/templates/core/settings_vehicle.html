@@ -1,0 +1,203 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-shrink: 0; }
+    .page-header h1 { margin: 0; font-size: 1.8rem; color: var(--text-color); }
+    .page-header p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.92rem; }
+    
+    .btn-create { background: var(--primary-color, #0284c7); color: #fff !important; padding: 10px 22px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background 0.2s; }
+    .btn-create:hover { background: #0369a1; }
+
+    .table-wrapper { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .table-scroll { flex: 1; overflow: auto; }
+    .acc-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
+    .acc-table thead { background: #f8fafc; position: sticky; top: 0; z-index: 10; }
+    .acc-table thead th { padding: 13px 18px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    .acc-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+    .acc-table tbody tr:hover { background: #f8fafc; }
+    .acc-table tbody td { padding: 13px 18px; font-size: 0.95rem; vertical-align: middle; color: #334155; }
+    
+    .btn-action { border: none; background: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; transition: background 0.15s; text-decoration: none; display: inline-block; }
+    .btn-edit { color: #0284c7; } .btn-edit:hover { background: #e0f2fe; }
+    .btn-delete { color: #ef4444; } .btn-delete:hover { background: #fee2e2; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-content { background: white; border-radius: 16px; width: 450px; max-width: 95%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+    .modal-header h3 { margin: 0; font-size: 1.25rem; color: #1e293b; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; line-height: 1; padding: 0; margin: 0; }
+    .modal-body { padding: 24px; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 0.88rem; font-weight: 600; color: #374151; margin-bottom: 7px; }
+    .form-control { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    .form-control:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
+    
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+    .btn-cancel { background: #f1f5f9; color: #475569; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-cancel:hover { background: #e2e8f0; }
+    .btn-save { background: var(--primary-color, #0284c7); color: #fff; padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-save:hover { background: #0369a1; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>Cấu Hình Tải Trọng & Số Khối</h1>
+        <p>Thiết lập danh sách các Loại xe và mức Số khối tự động tương ứng</p>
+    </div>
+    <button class="btn-create" onclick="openModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+        Thêm Loại Xe Mới
+    </button>
+</div>
+
+<div class="table-wrapper">
+    <div class="table-scroll">
+        <table class="acc-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px; text-align: center;">Thứ tự</th>
+                    <th>Loại Xe / Tải Trọng</th>
+                    <th>Số Khối Mặc Định</th>
+                    <th style="text-align: right; width: 150px;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in settings %}
+                <tr>
+                    <td style="text-align: center; color: #94a3b8; font-weight: 600;">{{ item.thu_tu }}</td>
+                    <td style="font-weight: 600; color: #0284c7;">{{ item.loai_xe }}</td>
+                    <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 500;">{{ item.so_khoi_mac_dinh|default:"(Trống)" }}</span></td>
+                    <td style="text-align: right;">
+                        <button class="btn-action btn-edit" onclick="openModal({{ item.id }}, '{{ item.loai_xe|escapejs }}', '{{ item.so_khoi_mac_dinh|escapejs }}', {{ item.thu_tu }})">Sửa</button>
+                        <button class="btn-action btn-delete" onclick="deleteSetting({{ item.id }}, '{{ item.loai_xe|escapejs }}')">Xóa</button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">⚙️</div>
+                        Chưa có cấu hình nào. Hãy thêm mới!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Thêm/Sửa -->
+<div class="modal-overlay" id="settingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Thêm Loại Xe</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="settingForm" onsubmit="saveSetting(event)">
+            <input type="hidden" id="settingId" name="id">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Loại xe (Tải trọng) *</label>
+                    <input type="text" id="loai_xe" name="loai_xe" class="form-control" placeholder="VD: 1.25T, 5T, LTL..." required>
+                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px; display: block;">Sẽ hiển thị trong dropdown khi chọn xe.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Số khối mặc định</label>
+                    <input type="text" id="so_khoi_mac_dinh" name="so_khoi_mac_dinh" class="form-control" placeholder="VD: 0-6, 15, >40...">
+                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px; display: block;">Sẽ tự động điền vào ô Số khối khi chọn loại xe này.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Thứ tự hiển thị</label>
+                    <input type="number" id="thu_tu" name="thu_tu" class="form-control" value="0" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Hủy</button>
+                <button type="submit" class="btn-save" id="btnSave">Lưu Cấu Hình</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const modal = document.getElementById('settingModal');
+
+function openModal(id = '', loaiXe = '', soKhoi = '', thuTu = 0) {
+    document.getElementById('modalTitle').textContent = id ? 'Sửa Cấu Hình' : 'Thêm Loại Xe';
+    document.getElementById('settingId').value = id;
+    document.getElementById('loai_xe').value = loaiXe;
+    document.getElementById('so_khoi_mac_dinh').value = soKhoi;
+    document.getElementById('thu_tu').value = thuTu;
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    modal.style.display = 'none';
+    document.getElementById('settingForm').reset();
+}
+
+async function saveSetting(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    
+    try {
+        document.getElementById('btnSave').textContent = 'Đang lưu...';
+        document.getElementById('btnSave').disabled = true;
+        
+        const res = await fetch('/api/settings/vehicles/save/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': data.csrfmiddlewaretoken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            await Swal.fire({ title: 'Thành công!', text: 'Đã lưu cấu hình.', icon: 'success', timer: 1500, showConfirmButton: false });
+            window.location.reload();
+        } else {
+            Swal.fire('Lỗi', result.error || 'Có lỗi xảy ra', 'error');
+            document.getElementById('btnSave').textContent = 'Lưu Cấu Hình';
+            document.getElementById('btnSave').disabled = false;
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không thể kết nối máy chủ', 'error');
+        document.getElementById('btnSave').textContent = 'Lưu Cấu Hình';
+        document.getElementById('btnSave').disabled = false;
+    }
+}
+
+async function deleteSetting(id, name) {
+    const confirm = await Swal.fire({
+        title: 'Xóa cấu hình?',
+        text: `Bạn có chắc muốn xóa cấu hình của loại xe ${name}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonText: 'Hủy',
+        confirmButtonText: 'Có, xóa!'
+    });
+    
+    if (confirm.isConfirmed) {
+        try {
+            const fd = new FormData();
+            fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            const res = await fetch(`/api/settings/vehicles/${id}/delete/`, { method: 'POST', body: fd });
+            const result = await res.json();
+            if (result.success) {
+                await Swal.fire({ title: 'Đã xóa!', icon: 'success', timer: 1500, showConfirmButton: false });
+                window.location.reload();
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không thể xóa', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Mất kết nối máy chủ', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

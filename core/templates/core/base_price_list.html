@@ -136,34 +136,16 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label class="form-label">Loại xe *</label>
-                        <select id="addLoaiXe" class="form-control" required>
-                            <option value="">Chọn loại xe</option>
-                            <option value="1.25T">1.25T</option>
-                            <option value="2T">2T</option>
-                            <option value="3.5T">3.5T</option>
-                            <option value="5T">5T</option>
-                            <option value="7T">7T</option>
-                            <option value="9T">9T</option>
-                            <option value="11T">11T</option>
-                            <option value="15T">15T</option>
-                            <option value="LTL">LTL</option>
-                        </select>
+                    <div>
+                        <label class="form-label">Loại xe *</label>
+                        <input type="text" id="addLoaiXe" class="form-control" list="loaiXeList" placeholder="Chọn hoặc nhập loại xe" required onchange="handleLoaiXeChange(this, 'addSoKhoi')">
+                        <datalist id="loaiXeList"></datalist>
                     </div>
                     <div>
                         <label class="form-label">Số khối</label>
-                        <select id="addSoKhoi" class="form-control">
-                            <option value="">Chọn số khối</option>
-                            <option value="0-6">0-6</option>
-                            <option value="7-10">7-10</option>
-                            <option value="11-14">11-14</option>
-                            <option value="15-18">15-18</option>
-                            <option value="19-28">19-28</option>
-                            <option value="29-30">29-30</option>
-                            <option value="31-35">31-35</option>
-                            <option value="36-40">36-40</option>
-                            <option value=">40">>40</option>
-                            <option value="LTL">LTL</option>
-                        </select>
+                        <input type="text" id="addSoKhoi" class="form-control" list="soKhoiList" placeholder="Chọn hoặc nhập số khối">
+                        <datalist id="soKhoiList"></datalist>
+                    </div>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -248,6 +230,7 @@
                         <input type="date" id="editNgayApDung" class="form-control" required>
                     </div>
                 </div>
+
                 <div style="margin-bottom: 15px;">
                     <label class="form-label">Lý do cập nhật *</label>
                     <input type="text" id="editLyDo" class="form-control" required placeholder="Nhập lý do đổi giá">
@@ -262,6 +245,53 @@
 </div>
 
 <script>
+    let vehicleSettings = {};
+
+    async function loadVehicleSettings() {
+        try {
+            const res = await fetch('/api/settings/vehicles/get/');
+            const result = await res.json();
+            if (result.success) {
+                vehicleSettings = result.data;
+                const loaiXeList = document.getElementById('loaiXeList');
+                const soKhoiList = document.getElementById('soKhoiList');
+                
+                // Clear existing
+                loaiXeList.innerHTML = '';
+                soKhoiList.innerHTML = '';
+                
+                // Add unique soKhoi values to datalist
+                const uniqueSoKhoi = new Set();
+                for (const [loai, khoi] of Object.entries(vehicleSettings)) {
+                    const opt1 = document.createElement('option');
+                    opt1.value = loai;
+                    loaiXeList.appendChild(opt1);
+                    
+                    if (khoi && !uniqueSoKhoi.has(khoi)) {
+                        uniqueSoKhoi.add(khoi);
+                        const opt2 = document.createElement('option');
+                        opt2.value = khoi;
+                        soKhoiList.appendChild(opt2);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load vehicle settings', e);
+        }
+    }
+
+    function handleLoaiXeChange(inputEl, targetSoKhoiId) {
+        const selected = inputEl.value;
+        const target = document.getElementById(targetSoKhoiId);
+        if (selected && vehicleSettings[selected] && target) {
+            target.value = vehicleSettings[selected];
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadVehicleSettings();
+    });
+
     function formatMoney(amount) {
         return new Intl.NumberFormat('vi-VN').format(amount);
     }

@@ -105,7 +105,8 @@ def process_routes(request, partner):
         huyen_g = clean_huyen(huyen_g)
         
         try:
-            tai_trong = float(tai_trongs[i]) if i < len(tai_trongs) and tai_trongs[i] else 0.0
+            t_str = tai_trongs[i].lower().replace('tấn', '').replace('t', '').strip() if i < len(tai_trongs) and tai_trongs[i] else '0'
+            tai_trong = float(t_str)
         except ValueError:
             tai_trong = 0.0
         so_khoi = so_khois[i] if i < len(so_khois) and so_khois[i] else None
@@ -2937,5 +2938,80 @@ def api_delete_user(request, pk):
                     
         user.delete()
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# ============================================================
+# Cấu hình Loại Xe & Số Khối
+# ============================================================
+import json
+
+@login_required
+def settings_vehicle_list(request):
+    if not request.user.is_superuser:
+        from django.contrib import messages
+        messages.error(request, 'Chỉ Admin Tổng mới có quyền truy cập Cấu hình hệ thống.')
+        return redirect('search_prices')
+    
+    from core.models import CauHinhLoaiXe
+    settings = CauHinhLoaiXe.objects.all()
+    return render(request, 'core/settings_vehicle.html', {'settings': settings})
+
+@login_required
+def api_save_vehicle_setting(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        data = json.loads(request.body)
+        setting_id = data.get('id')
+        loai_xe = data.get('loai_xe', '').strip()
+        so_khoi_mac_dinh = data.get('so_khoi_mac_dinh', '').strip()
+        thu_tu = int(data.get('thu_tu', 0))
+        
+        if not loai_xe:
+            return JsonResponse({'success': False, 'error': 'Loại xe không được để trống'})
+            
+        from core.models import CauHinhLoaiXe
+        if setting_id:
+            obj = CauHinhLoaiXe.objects.get(pk=setting_id)
+            obj.loai_xe = loai_xe
+            obj.so_khoi_mac_dinh = so_khoi_mac_dinh
+            obj.thu_tu = thu_tu
+            obj.save()
+        else:
+            if CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).exists():
+                return JsonResponse({'success': False, 'error': 'Loại xe này đã tồn tại'})
+            CauHinhLoaiXe.objects.create(
+                loai_xe=loai_xe,
+                so_khoi_mac_dinh=so_khoi_mac_dinh,
+                thu_tu=thu_tu
+            )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_delete_vehicle_setting(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False})
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    try:
+        from core.models import CauHinhLoaiXe
+        CauHinhLoaiXe.objects.filter(pk=pk).delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_get_vehicle_settings(request):
+    try:
+        from core.models import CauHinhLoaiXe
+        settings = CauHinhLoaiXe.objects.all().values('loai_xe', 'so_khoi_mac_dinh')
+        data = {s['loai_xe']: s['so_khoi_mac_dinh'] for s in settings}
+        return JsonResponse({'success': True, 'data': data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

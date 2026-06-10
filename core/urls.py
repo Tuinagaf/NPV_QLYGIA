@@ -54,4 +54,10 @@ urlpatterns = [
     path('manage-accounts/create/', views.account_create, name='account_create'),
     path('manage-accounts/<int:pk>/edit/', views.account_update, name='account_update'),
     path('api/manage-accounts/<int:pk>/delete/', views.api_delete_account, name='api_delete_account'),
+
+    # Cấu hình hệ thống
+    path('settings/vehicles/', views.settings_vehicle_list, name='settings_vehicle_list'),
+    path('api/settings/vehicles/save/', views.api_save_vehicle_setting, name='api_save_vehicle_setting'),
+    path('api/settings/vehicles/<int:pk>/delete/', views.api_delete_vehicle_setting, name='api_delete_vehicle_setting'),
+    path('api/settings/vehicles/get/', views.api_get_vehicle_settings, name='api_get_vehicle_settings'),
 ]

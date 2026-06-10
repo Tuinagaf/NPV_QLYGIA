@@ -26,34 +26,13 @@
         </div>
         <div>
             <label class="form-label" style="font-size: 0.8rem">Loại xe</label>
-            <select id="filterLoaiXe" class="form-control">
-                <option value="">Chọn loại xe</option>
-                <option value="1.25T">1.25T</option>
-                <option value="2T">2T</option>
-                <option value="3.5T">3.5T</option>
-                <option value="5T">5T</option>
-                <option value="7T">7T</option>
-                <option value="9T">9T</option>
-                <option value="11T">11T</option>
-                <option value="15T">15T</option>
-                <option value="LTL">LTL</option>
-            </select>
+            <input type="text" id="filterLoaiXe" class="form-control" list="loaiXeList" placeholder="Chọn hoặc nhập loại xe" onchange="handleLoaiXeInput(this, 'filterKhoi')">
+            <datalist id="loaiXeList"></datalist>
         </div>
         <div>
             <label class="form-label" style="font-size: 0.8rem">Số khối</label>
-            <select id="filterKhoi" class="form-control">
-                <option value="">Tất cả</option>
-                <option value="0-6">0-6</option>
-                <option value="7-10">7-10</option>
-                <option value="11-14">11-14</option>
-                <option value="15-18">15-18</option>
-                <option value="19-28">19-28</option>
-                <option value="29-30">29-30</option>
-                <option value="31-35">31-35</option>
-                <option value="36-40">36-40</option>
-                <option value=">40">>40</option>
-                <option value="LTL">LTL</option>
-            </select>
+            <input type="text" id="filterKhoi" class="form-control" list="soKhoiList" placeholder="Chọn hoặc nhập số khối">
+            <datalist id="soKhoiList"></datalist>
         </div>
         <div>
             <button class="btn-primary" onclick="performSearch()" style="height: 40px; padding: 0 25px;">Tra Cứu</button>
@@ -110,30 +89,43 @@
         return new Intl.NumberFormat('vi-VN').format(amount);
     }
 
-    function handleLoaiXeInput(input, targetId) {
-        const val = input.value.toString().toLowerCase().replace(/t$/, '').trim();
-        const map = {
-            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
-            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'ltl': 'LTL'
-        };
-        if (map[val] !== undefined) {
-            let target = $('#' + targetId);
-            if (target.val() !== map[val]) {
-                target.val(map[val]).trigger('change');
+    let vehicleSettings = {};
+    async function loadVehicleSettings() {
+        try {
+            const res = await fetch('/api/settings/vehicles/get/');
+            const result = await res.json();
+            if (result.success) {
+                vehicleSettings = result.data;
+                const loaiXeList = document.getElementById('loaiXeList');
+                const soKhoiList = document.getElementById('soKhoiList');
+                
+                if (loaiXeList && soKhoiList) {
+                    loaiXeList.innerHTML = '';
+                    soKhoiList.innerHTML = '';
+                    const uniqueSoKhoi = new Set();
+                    for (const [loai, khoi] of Object.entries(vehicleSettings)) {
+                        const opt1 = document.createElement('option');
+                        opt1.value = loai;
+                        loaiXeList.appendChild(opt1);
+                        
+                        if (khoi && !uniqueSoKhoi.has(khoi)) {
+                            uniqueSoKhoi.add(khoi);
+                            const opt2 = document.createElement('option');
+                            opt2.value = khoi;
+                            soKhoiList.appendChild(opt2);
+                        }
+                    }
+                }
             }
-        }
+        } catch (e) { console.error('Failed to load vehicle settings', e); }
     }
 
-    function handleSoKhoiInput(input, targetId) {
-        const val = input.value.toString().trim();
-        const map = {
-            '0-6': '1.25T', '7-10': '2T', '11-14': '3.5T', '15-18': '5T',
-            '19-28': '7T', '29-30': '9T', '31-35': '11T', '36-40': '15T', 'LTL': 'LTL'
-        };
-        if (map[val] !== undefined) {
+    function handleLoaiXeInput(input, targetId) {
+        const val = input.value;
+        if (val && vehicleSettings[val]) {
             let target = $('#' + targetId);
-            if (target.val() !== map[val]) {
-                target.val(map[val]).trigger('change');
+            if (target.val() !== vehicleSettings[val]) {
+                target.val(vehicleSettings[val]).trigger('change');
             }
         }
     }
@@ -278,8 +270,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         $('.province-select').select2({ width: '100%' });
         $('.district-select').select2({ width: '100%' });
-        $('#filterLoaiXe').select2({ width: '100%' }).on('change', function() { handleLoaiXeInput(this, 'filterKhoi'); });
-        $('#filterKhoi').select2({ width: '100%' }).on('change', function() { handleSoKhoiInput(this, 'filterLoaiXe'); });
+        loadVehicleSettings();
         loadProvinces();
     });
 </script>
