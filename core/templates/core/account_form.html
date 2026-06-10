@@ -1,0 +1,165 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .header-link {
+        display: inline-flex;
+        align-items: center;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+        transition: color 0.2s;
+    }
+    .header-link:hover { color: var(--primary-color); }
+    .header-link svg { width: 16px; height: 16px; margin-right: 5px; }
+    
+    .page-title {
+        font-size: 1.8rem;
+        color: var(--text-color);
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 0.9rem; font-weight: 600; color: #334155; margin-bottom: 8px; }
+    .form-control { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+    
+    .permission-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .permission-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    .permission-item input {
+        margin-right: 12px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    .btn-save {
+        background: var(--primary-color);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        font-size: 1rem;
+        transition: background 0.2s;
+    }
+    .btn-save:hover { background: #0369a1; }
+</style>
+
+<div style="flex: 1; overflow-y: auto; padding-right: 10px; padding-bottom: 30px;">
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+    <div>
+        <a href="{% url 'account_list' %}" class="header-link">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Quay lại danh sách
+        </a>
+        <h1 class="page-title">{{ title }}</h1>
+    </div>
+</div>
+
+<form method="post" id="account-form" class="glass-card" style="max-width: 800px; padding: 30px;">
+    {% csrf_token %}
+    
+    <div class="modal-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="form-group">
+            <label class="form-label">Tên đăng nhập (Username) *</label>
+            <input type="text" name="username" class="form-control" value="{{ edit_user.username }}" {% if edit_user %}readonly style="background: #f1f5f9; color: #64748b; cursor: not-allowed;"{% endif %} required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">
+                {% if edit_user %}Mật khẩu mới (Bỏ trống nếu không muốn đổi){% else %}Mật khẩu *{% endif %}
+            </label>
+            <input type="password" name="password" class="form-control" placeholder="Nhập mật khẩu..." {% if not edit_user %}required{% endif %}>
+        </div>
+    </div>
+    
+    {% if edit_user %}
+    <div class="form-group" style="margin-top: 10px;">
+        <label class="form-label" style="display: flex; align-items: center; cursor: pointer;">
+            <input type="checkbox" name="is_active" value="1" style="width: 20px; height: 20px; margin-right: 10px;" {% if edit_user.is_active %}checked{% endif %}>
+            Cho phép đăng nhập (Tài khoản đang hoạt động)
+        </label>
+    </div>
+    {% endif %}
+
+    <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 30px 0;">
+
+    <h3 style="margin-top: 0; color: #0f172a;">Phân quyền (Permissions)</h3>
+    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">
+        {% if edit_user and edit_user.is_superuser %}
+            Tài khoản này là Admin tổng (Superuser) nên tự động có tất cả quyền. Bạn không cần phân quyền chi tiết.
+        {% else %}
+            Chọn các quyền hạn mà tài khoản này có thể thực hiện trong hệ thống:
+        {% endif %}
+    </p>
+
+    {% if not edit_user or not edit_user.is_superuser %}
+    <div class="modal-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+        {% for p in core_permissions %}
+        <label class="permission-item">
+            <input type="checkbox" name="permissions[]" value="{{ p.id }}" class="perm-checkbox" data-action="{{ p.action }}" data-model="{{ p.model }}" {% if p.id in user_perms %}checked{% endif %}>
+            <div>
+                <strong style="color: #334155; font-size: 0.95rem;">{{ p.vn_name|default:p.name }}</strong>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 3px;">Mã quyền: {{ p.codename }}</div>
+            </div>
+        </label>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="text-align: right; margin-top: 20px;">
+        <button type="submit" class="btn-save">Lưu Thông Tin</button>
+    </div>
+</form>
+</div>
+
+<script>
+    // JS liên kết quyền
+    document.querySelectorAll('.perm-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            // Nếu check Thêm, Sửa, Xóa thì tự động check Xem
+            if (this.checked && ['add', 'change', 'delete'].includes(this.dataset.action)) {
+                let viewCb = document.querySelector(`.perm-checkbox[data-model="${this.dataset.model}"][data-action="view"]`);
+                if (viewCb && !viewCb.checked) {
+                    viewCb.checked = true;
+                }
+            }
+            // Nếu uncheck Xem thì tự động uncheck Thêm, Sửa, Xóa
+            if (!this.checked && this.dataset.action === 'view') {
+                document.querySelectorAll(`.perm-checkbox[data-model="${this.dataset.model}"]`).forEach(relatedCb => {
+                    relatedCb.checked = false;
+                });
+            }
+        });
+    });
+
+    // Validation đơn giản
+    document.getElementById('account-form').addEventListener('submit', function(e) {
+        {% if not edit_user %}
+        const pwd = this.querySelector('input[name="password"]').value;
+        if (!pwd || pwd.length < 6) {
+            e.preventDefault();
+            Swal.fire('Lỗi', 'Mật khẩu phải có ít nhất 6 ký tự!', 'warning');
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}
