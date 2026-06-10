@@ -6,7 +6,7 @@ services:
       - .:/app
       - sqlite_data:/app  # Persist SQLite database
     ports:
-      - "8000:8000"
+      - "80:8000"  # Map port 80 of EC2 to port 8000 of container
     environment:
       - SECRET_KEY=django-production-secret-key-npv-qlygia-2026
       - DEBUG=False
