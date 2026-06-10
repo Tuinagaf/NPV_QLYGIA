@@ -153,16 +153,6 @@
                         <label class="form-label">Số khối</label>
                         <select id="addSoKhoi" name="so_khoi" class="form-control">
                             <option value="">Chọn số khối</option>
-                            <option value="0-6">0-6</option>
-                            <option value="7-10">7-10</option>
-                            <option value="11-14">11-14</option>
-                            <option value="15-18">15-18</option>
-                            <option value="19-28">19-28</option>
-                            <option value="29-30">29-30</option>
-                            <option value="31-35">31-35</option>
-                            <option value="36-40">36-40</option>
-                            <option value=">40">>40</option>
-                            <option value="LTL">LTL</option>
                         </select>
                     </div>
                 </div>
@@ -271,6 +261,42 @@
             const result = await res.json();
             if (result.success) {
                 vehicleSettings = result.data;
+                const soKhoiSelect = $('#addSoKhoi');
+                const filterKhoiSelect = $('#filterKhoi');
+                
+                const currentAddVal = soKhoiSelect.val();
+                const currentFilterVal = filterKhoiSelect.val();
+                
+                soKhoiSelect.empty().append('<option value="">Chọn số khối</option>');
+                if (filterKhoiSelect.length) {
+                    filterKhoiSelect.empty().append('<option value="">Tất cả</option>');
+                }
+                
+                const uniqueSoKhoi = new Set();
+                for (const khoi of Object.values(vehicleSettings)) {
+                    if (khoi) uniqueSoKhoi.add(khoi);
+                }
+                
+                const sortedKhoi = Array.from(uniqueSoKhoi).sort((a, b) => {
+                    if (a === 'LTL') return 1;
+                    if (b === 'LTL') return -1;
+                    const numA = parseFloat(a.split('-')[0].replace(/[^0-9.]/g, ''));
+                    const numB = parseFloat(b.split('-')[0].replace(/[^0-9.]/g, ''));
+                    return numA - numB;
+                });
+
+                sortedKhoi.forEach(khoi => {
+                    soKhoiSelect.append(new Option(khoi, khoi));
+                    if (filterKhoiSelect.length) {
+                        filterKhoiSelect.append(new Option(khoi, khoi));
+                    }
+                });
+                
+                if (uniqueSoKhoi.has(currentAddVal)) soKhoiSelect.val(currentAddVal);
+                if (uniqueSoKhoi.has(currentFilterVal) && filterKhoiSelect.length) filterKhoiSelect.val(currentFilterVal);
+                
+                soKhoiSelect.trigger('change.select2');
+                if (filterKhoiSelect.length) filterKhoiSelect.trigger('change.select2');
             }
         } catch (e) {
             console.error('Failed to load vehicle settings', e);

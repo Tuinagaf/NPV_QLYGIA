@@ -236,13 +236,15 @@ class CauHinhLoaiXe(models.Model):
         if self.khoi_tu is not None and self.khoi_den is not None:
             tu = int(self.khoi_tu) if self.khoi_tu.is_integer() else self.khoi_tu
             den = int(self.khoi_den) if self.khoi_den.is_integer() else self.khoi_den
+            if tu == den:
+                return f"{tu}"
             return f"{tu}-{den}"
         elif self.khoi_tu is not None:
             tu = int(self.khoi_tu) if self.khoi_tu.is_integer() else self.khoi_tu
-            return f">{tu}"
+            return f"{tu}"
         elif self.khoi_den is not None:
             den = int(self.khoi_den) if self.khoi_den.is_integer() else self.khoi_den
-            return f"<{den}"
+            return f"{den}"
         return ""
 
     def __str__(self):

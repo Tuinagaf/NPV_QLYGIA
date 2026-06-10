@@ -43,16 +43,6 @@
             <label class="form-label" style="font-size: 0.8rem">Số khối</label>
             <select id="filterKhoi" class="form-control">
                 <option value="">Tất cả</option>
-                <option value="0-6">0-6</option>
-                <option value="7-10">7-10</option>
-                <option value="11-14">11-14</option>
-                <option value="15-18">15-18</option>
-                <option value="19-28">19-28</option>
-                <option value="29-30">29-30</option>
-                <option value="31-35">31-35</option>
-                <option value="36-40">36-40</option>
-                <option value=">40">>40</option>
-                <option value="LTL">LTL</option>
             </select>
         </div>
         <div>
@@ -117,6 +107,32 @@
             const result = await res.json();
             if (result.success) {
                 vehicleSettings = result.data;
+                const soKhoiSelect = $('#filterKhoi');
+                const currentVal = soKhoiSelect.val();
+                soKhoiSelect.empty().append('<option value="">Tất cả</option>');
+                
+                const uniqueSoKhoi = new Set();
+                for (const khoi of Object.values(vehicleSettings)) {
+                    if (khoi) uniqueSoKhoi.add(khoi);
+                }
+                
+                // Sort numbers vs strings
+                const sortedKhoi = Array.from(uniqueSoKhoi).sort((a, b) => {
+                    if (a === 'LTL') return 1;
+                    if (b === 'LTL') return -1;
+                    const numA = parseFloat(a.split('-')[0].replace(/[^0-9.]/g, ''));
+                    const numB = parseFloat(b.split('-')[0].replace(/[^0-9.]/g, ''));
+                    return numA - numB;
+                });
+
+                sortedKhoi.forEach(khoi => {
+                    soKhoiSelect.append(new Option(khoi, khoi));
+                });
+                
+                if (uniqueSoKhoi.has(currentVal)) {
+                    soKhoiSelect.val(currentVal);
+                }
+                soKhoiSelect.trigger('change.select2');
             }
         } catch (e) { console.error('Failed to load vehicle settings', e); }
     }

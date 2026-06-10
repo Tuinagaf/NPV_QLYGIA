@@ -287,16 +287,6 @@
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Số khối</label>
                         <select name="so_khoi[]" class="form-control form-control-sm so-khoi-input" required>
                             <option value="">Chọn số khối</option>
-                            <option value="0-6">0-6</option>
-                            <option value="7-10">7-10</option>
-                            <option value="11-14">11-14</option>
-                            <option value="15-18">15-18</option>
-                            <option value="19-28">19-28</option>
-                            <option value="29-30">29-30</option>
-                            <option value="31-35">31-35</option>
-                            <option value="36-40">36-40</option>
-                            <option value=">40">>40</option>
-                            <option value="LTL">LTL</option>
                         </select>
                     </div>
                     <div>
@@ -382,6 +372,40 @@
                 }
             }
         }
+    }
+
+    let vehicleSettings = {};
+    let sortedSoKhoiList = [];
+    async function loadVehicleSettings() {
+        try {
+            const res = await fetch('/api/settings/vehicles/get/');
+            const result = await res.json();
+            if (result.success) {
+                vehicleSettings = result.data;
+                const uniqueSoKhoi = new Set();
+                for (const khoi of Object.values(vehicleSettings)) {
+                    if (khoi) uniqueSoKhoi.add(khoi);
+                }
+                
+                sortedSoKhoiList = Array.from(uniqueSoKhoi).sort((a, b) => {
+                    if (a === 'LTL') return 1;
+                    if (b === 'LTL') return -1;
+                    const numA = parseFloat(a.split('-')[0].replace(/[^0-9.]/g, ''));
+                    const numB = parseFloat(b.split('-')[0].replace(/[^0-9.]/g, ''));
+                    return numA - numB;
+                });
+
+                document.querySelectorAll('select[name="so_khoi[]"]').forEach(select => {
+                    if (select.closest('#empty-form-template')) return;
+                    const currentVal = select.value;
+                    select.innerHTML = '<option value="">Chọn số khối</option>';
+                    sortedSoKhoiList.forEach(khoi => {
+                        select.add(new Option(khoi, khoi));
+                    });
+                    if (uniqueSoKhoi.has(currentVal)) select.value = currentVal;
+                });
+            }
+        } catch (e) { console.error('Failed to load vehicle settings', e); }
     }
 
     async function loadProvinces() {
@@ -565,6 +589,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", async function() {
+        await loadVehicleSettings();
         await loadProvinces();
         
         var existingRows = {{ routes|length|default:0 }};
@@ -593,6 +618,13 @@
                 
                 populateProvinceSelect($(newBlock).find('select[name="tinh_nhan[]"]')[0]);
                 populateProvinceSelect($(newBlock).find('select[name="tinh_giao[]"]')[0]);
+                let soKhoiSelect = newBlock.querySelector('select[name="so_khoi[]"]');
+                if (soKhoiSelect && sortedSoKhoiList.length > 0) {
+                    soKhoiSelect.innerHTML = '<option value="">Chọn số khối</option>';
+                    sortedSoKhoiList.forEach(khoi => {
+                        soKhoiSelect.add(new Option(khoi, khoi));
+                    });
+                }
                 $(newBlock).find('select[name="huyen_nhan[]"]').val(route.huyen_nhan).trigger('change');
                 $(newBlock).find('select[name="huyen_giao[]"]').val(route.huyen_giao).trigger('change');
                 
