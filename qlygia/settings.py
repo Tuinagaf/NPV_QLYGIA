@@ -28,6 +28,16 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
+# Cấu hình cho Nginx reverse proxy (cần cho HTTPS)
+# Django tin tưởng header X-Forwarded-Proto từ Nginx
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Cho phép CSRF hoạt động đúng khi chạy sau Nginx HTTPS
+CSRF_TRUSTED_ORIGINS = [
+    'https://npv-qlygia.duckdns.org',
+    'http://npv-qlygia.duckdns.org',
+]
+
 
 # Application definition
 
