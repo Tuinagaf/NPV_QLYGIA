@@ -151,7 +151,19 @@
                     </div>
                     <div>
                         <label class="form-label">Số khối</label>
-                        <input type="text" id="addSoKhoi" name="so_khoi" class="form-control" placeholder="Tự động điền theo loại xe">
+                        <select id="addSoKhoi" name="so_khoi" class="form-control">
+                            <option value="">Chọn số khối</option>
+                            <option value="0-6">0-6</option>
+                            <option value="7-10">7-10</option>
+                            <option value="11-14">11-14</option>
+                            <option value="15-18">15-18</option>
+                            <option value="19-28">19-28</option>
+                            <option value="29-30">29-30</option>
+                            <option value="31-35">31-35</option>
+                            <option value="36-40">36-40</option>
+                            <option value=">40">>40</option>
+                            <option value="LTL">LTL</option>
+                        </select>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -626,7 +638,7 @@
         if (val && vehicleSettings[val]) {
             let target = $('#' + targetId);
             if (target.val() !== vehicleSettings[val]) {
-                target.val(vehicleSettings[val]).trigger('change');
+                target.val(vehicleSettings[val]).trigger('change.select2');
             }
         }
     }
@@ -687,7 +699,9 @@
         $('#filterTinhNhan, #filterTinhGiao, #filterHuyenNhan, #filterHuyenGiao').select2({ width: '100%' });
         $('#addTinhNhan, #addTinhGiao, #addHuyenNhan, #addHuyenGiao').select2({ width: '100%', dropdownParent: $('#basePriceModal') });
         $('#filterLoaiXe').select2({ width: '100%' }).on('change', function() { handleLoaiXeInput(this, 'filterKhoi'); });
+        $('#filterKhoi').select2({ width: '100%' });
         $('#addLoaiXe').select2({ width: '100%', dropdownParent: $('#basePriceModal') }).on('change', function() { handleLoaiXeInput(this, 'addSoKhoi'); });
+        $('#addSoKhoi').select2({ width: '100%', dropdownParent: $('#basePriceModal') });
         
         loadProvinces();
         loadBasePrices();
