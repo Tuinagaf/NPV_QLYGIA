@@ -26,13 +26,22 @@
         </div>
         <div>
             <label class="form-label" style="font-size: 0.8rem">Loại xe</label>
-            <input type="text" id="filterLoaiXe" class="form-control" list="loaiXeList" placeholder="Chọn hoặc nhập loại xe" onchange="handleLoaiXeInput(this, 'filterKhoi')">
-            <datalist id="loaiXeList"></datalist>
+            <select id="filterLoaiXe" class="form-control" onchange="handleLoaiXeInput(this, 'filterKhoi')">
+                <option value="">Chọn loại xe</option>
+                <option value="1.25T">1.25T</option>
+                <option value="2T">2T</option>
+                <option value="3.5T">3.5T</option>
+                <option value="5T">5T</option>
+                <option value="7T">7T</option>
+                <option value="9T">9T</option>
+                <option value="11T">11T</option>
+                <option value="15T">15T</option>
+                <option value="LTL">LTL</option>
+            </select>
         </div>
         <div>
             <label class="form-label" style="font-size: 0.8rem">Số khối</label>
-            <input type="text" id="filterKhoi" class="form-control" list="soKhoiList" placeholder="Chọn hoặc nhập số khối">
-            <datalist id="soKhoiList"></datalist>
+            <input type="text" id="filterKhoi" class="form-control" placeholder="Tự động điền theo loại xe">
         </div>
         <div>
             <button class="btn-primary" onclick="performSearch()" style="height: 40px; padding: 0 25px;">Tra Cứu</button>
@@ -96,26 +105,6 @@
             const result = await res.json();
             if (result.success) {
                 vehicleSettings = result.data;
-                const loaiXeList = document.getElementById('loaiXeList');
-                const soKhoiList = document.getElementById('soKhoiList');
-                
-                if (loaiXeList && soKhoiList) {
-                    loaiXeList.innerHTML = '';
-                    soKhoiList.innerHTML = '';
-                    const uniqueSoKhoi = new Set();
-                    for (const [loai, khoi] of Object.entries(vehicleSettings)) {
-                        const opt1 = document.createElement('option');
-                        opt1.value = loai;
-                        loaiXeList.appendChild(opt1);
-                        
-                        if (khoi && !uniqueSoKhoi.has(khoi)) {
-                            uniqueSoKhoi.add(khoi);
-                            const opt2 = document.createElement('option');
-                            opt2.value = khoi;
-                            soKhoiList.appendChild(opt2);
-                        }
-                    }
-                }
             }
         } catch (e) { console.error('Failed to load vehicle settings', e); }
     }
@@ -270,6 +259,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         $('.province-select').select2({ width: '100%' });
         $('.district-select').select2({ width: '100%' });
+        $('#filterLoaiXe').select2({ width: '100%' }).on('change', function() { handleLoaiXeInput(this, 'filterKhoi'); });
         loadVehicleSettings();
         loadProvinces();
     });

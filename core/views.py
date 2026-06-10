@@ -2968,26 +2968,36 @@ def api_save_vehicle_setting(request):
         data = json.loads(request.body)
         setting_id = data.get('id')
         loai_xe = data.get('loai_xe', '').strip()
-        so_khoi_mac_dinh = data.get('so_khoi_mac_dinh', '').strip()
-        thu_tu = int(data.get('thu_tu', 0))
+        khoi_tu = data.get('khoi_tu')
+        khoi_den = data.get('khoi_den')
         
         if not loai_xe:
             return JsonResponse({'success': False, 'error': 'Loại xe không được để trống'})
             
+        try:
+            khoi_tu = float(khoi_tu) if khoi_tu is not None and str(khoi_tu).strip() != '' else None
+        except ValueError:
+            khoi_tu = None
+            
+        try:
+            khoi_den = float(khoi_den) if khoi_den is not None and str(khoi_den).strip() != '' else None
+        except ValueError:
+            khoi_den = None
+
         from core.models import CauHinhLoaiXe
         if setting_id:
             obj = CauHinhLoaiXe.objects.get(pk=setting_id)
             obj.loai_xe = loai_xe
-            obj.so_khoi_mac_dinh = so_khoi_mac_dinh
-            obj.thu_tu = thu_tu
+            obj.khoi_tu = khoi_tu
+            obj.khoi_den = khoi_den
             obj.save()
         else:
             if CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).exists():
                 return JsonResponse({'success': False, 'error': 'Loại xe này đã tồn tại'})
             CauHinhLoaiXe.objects.create(
                 loai_xe=loai_xe,
-                so_khoi_mac_dinh=so_khoi_mac_dinh,
-                thu_tu=thu_tu
+                khoi_tu=khoi_tu,
+                khoi_den=khoi_den
             )
         return JsonResponse({'success': True})
     except Exception as e:
@@ -3010,8 +3020,8 @@ def api_delete_vehicle_setting(request, pk):
 def api_get_vehicle_settings(request):
     try:
         from core.models import CauHinhLoaiXe
-        settings = CauHinhLoaiXe.objects.all().values('loai_xe', 'so_khoi_mac_dinh')
-        data = {s['loai_xe']: s['so_khoi_mac_dinh'] for s in settings}
+        settings = CauHinhLoaiXe.objects.all()
+        data = {s.loai_xe: s.get_so_khoi() for s in settings}
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

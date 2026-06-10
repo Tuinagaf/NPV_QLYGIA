@@ -56,20 +56,20 @@
         <table class="acc-table">
             <thead>
                 <tr>
-                    <th style="width: 80px; text-align: center;">Thứ tự</th>
+                    <th style="width: 80px; text-align: center;">ID</th>
                     <th>Loại Xe / Tải Trọng</th>
-                    <th>Số Khối Mặc Định</th>
+                    <th>Số Khối Cấu Hình</th>
                     <th style="text-align: right; width: 150px;">Thao Tác</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in settings %}
                 <tr>
-                    <td style="text-align: center; color: #94a3b8; font-weight: 600;">{{ item.thu_tu }}</td>
+                    <td style="text-align: center; color: #94a3b8; font-weight: 600;">{{ item.id }}</td>
                     <td style="font-weight: 600; color: #0284c7;">{{ item.loai_xe }}</td>
-                    <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 500;">{{ item.so_khoi_mac_dinh|default:"(Trống)" }}</span></td>
+                    <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 500;">{{ item.get_so_khoi|default:"(Trống)" }}</span></td>
                     <td style="text-align: right;">
-                        <button class="btn-action btn-edit" onclick="openModal({{ item.id }}, '{{ item.loai_xe|escapejs }}', '{{ item.so_khoi_mac_dinh|escapejs }}', {{ item.thu_tu }})">Sửa</button>
+                        <button class="btn-action btn-edit" onclick="openModal({{ item.id }}, '{{ item.loai_xe|escapejs }}', '{{ item.khoi_tu|default_if_none:'' }}', '{{ item.khoi_den|default_if_none:'' }}')">Sửa</button>
                         <button class="btn-action btn-delete" onclick="deleteSetting({{ item.id }}, '{{ item.loai_xe|escapejs }}')">Xóa</button>
                     </td>
                 </tr>
@@ -99,18 +99,30 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Loại xe (Tải trọng) *</label>
-                    <input type="text" id="loai_xe" name="loai_xe" class="form-control" placeholder="VD: 1.25T, 5T, LTL..." required>
-                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px; display: block;">Sẽ hiển thị trong dropdown khi chọn xe.</small>
+                    <select id="loai_xe" name="loai_xe" class="form-control" required>
+                        <option value="">Chọn loại xe</option>
+                        <option value="1.25T">1.25T</option>
+                        <option value="2T">2T</option>
+                        <option value="3.5T">3.5T</option>
+                        <option value="5T">5T</option>
+                        <option value="7T">7T</option>
+                        <option value="9T">9T</option>
+                        <option value="11T">11T</option>
+                        <option value="15T">15T</option>
+                        <option value="LTL">LTL</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Số khối mặc định</label>
-                    <input type="text" id="so_khoi_mac_dinh" name="so_khoi_mac_dinh" class="form-control" placeholder="VD: 0-6, 15, >40...">
-                    <small style="color: #64748b; font-size: 0.8rem; margin-top: 4px; display: block;">Sẽ tự động điền vào ô Số khối khi chọn loại xe này.</small>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label class="form-label">Từ (khối)</label>
+                        <input type="number" step="0.1" id="khoi_tu" name="khoi_tu" class="form-control" placeholder="Từ số khối">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="form-label">Đến (khối)</label>
+                        <input type="number" step="0.1" id="khoi_den" name="khoi_den" class="form-control" placeholder="Đến số khối">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Thứ tự hiển thị</label>
-                    <input type="number" id="thu_tu" name="thu_tu" class="form-control" value="0" required>
-                </div>
+                <small style="color: #64748b; font-size: 0.85rem; display: block; margin-bottom: 10px;">Để trống nếu không giới hạn (ví dụ: chỉ điền 'Đến' là 6 -> < 6 khối). Với LTL có thể để trống cả 2 ô.</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="closeModal()">Hủy</button>
@@ -123,12 +135,12 @@
 <script>
 const modal = document.getElementById('settingModal');
 
-function openModal(id = '', loaiXe = '', soKhoi = '', thuTu = 0) {
+function openModal(id = '', loaiXe = '', khoiTu = '', khoiDen = '') {
     document.getElementById('modalTitle').textContent = id ? 'Sửa Cấu Hình' : 'Thêm Loại Xe';
     document.getElementById('settingId').value = id;
     document.getElementById('loai_xe').value = loaiXe;
-    document.getElementById('so_khoi_mac_dinh').value = soKhoi;
-    document.getElementById('thu_tu').value = thuTu;
+    document.getElementById('khoi_tu').value = khoiTu;
+    document.getElementById('khoi_den').value = khoiDen;
     modal.style.display = 'flex';
 }
 

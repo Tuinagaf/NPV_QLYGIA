@@ -270,13 +270,22 @@
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Tải trọng (Tấn)</label>
-                        <input type="text" name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-input" list="taiTrongList" placeholder="Chọn hoặc nhập..." required onchange="handleTaiTrongChange(this)">
-                        <datalist id="taiTrongList"></datalist>
+                        <select name="tai_trong_tan[]" class="form-control form-control-sm tai-trong-input" required onchange="handleLoaiXeInput(this)">
+                            <option value="">Chọn tải trọng</option>
+                            <option value="1.25T">1.25T</option>
+                            <option value="2T">2T</option>
+                            <option value="3.5T">3.5T</option>
+                            <option value="5T">5T</option>
+                            <option value="7T">7T</option>
+                            <option value="9T">9T</option>
+                            <option value="11T">11T</option>
+                            <option value="15T">15T</option>
+                            <option value="LTL">LTL</option>
+                        </select>
                     </div>
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Số khối</label>
-                        <input type="text" name="so_khoi[]" class="form-control form-control-sm so-khoi-input" list="soKhoiList" placeholder="Chọn hoặc nhập..." required>
-                        <datalist id="soKhoiList"></datalist>
+                        <input type="text" name="so_khoi[]" class="form-control form-control-sm so-khoi-input" placeholder="Nhập số khối..." required>
                     </div>
                     <div>
                         <label class="form-label" style="font-size:0.8rem; font-weight: 500; color: #334155;">Kích thước (DxRxC)</label>
@@ -328,7 +337,7 @@
     async function fetchBasePriceForFormset(block) {
         let tn = block.querySelector('select[name="tinh_nhan[]"]')?.value;
         let tg = block.querySelector('select[name="tinh_giao[]"]')?.value;
-        let lxVal = block.querySelector('input[name="tai_trong_tan[]"]')?.value;
+        let lxVal = block.querySelector('select[name="tai_trong_tan[]"]')?.value;
         let gcsDisplay = block.querySelector('.gcs-display');
         
         if (!tn || !tg || !lxVal) {
@@ -336,9 +345,8 @@
             return;
         }
         
-        let lxStr = lxVal + 'T';
         try {
-            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lxStr)}`);
+            const res = await fetch(`/api/get-base-price/?tinh_nhan=${encodeURIComponent(tn)}&tinh_giao=${encodeURIComponent(tg)}&loai_xe=${encodeURIComponent(lxVal)}`);
             const data = await res.json();
             if (data.success && data.gia_co_so) {
                 gcsDisplay.innerHTML = `<span style="color:#0284c7; font-weight:600;" data-gcs="${data.gia_co_so}">GCS: ${Number(data.gia_co_so).toLocaleString('vi-VN')} đ</span>`;
@@ -350,6 +358,20 @@
     }
 
     // API Logic
+    function handleLoaiXeInput(selectElem) {
+        const val = selectElem.value;
+        const block = selectElem.closest('.route-block');
+        if (block) {
+            fetchBasePriceForFormset(block);
+            const volumeInput = block.querySelector('.so-khoi-input');
+            if (val && vehicleSettings[val]) {
+                if (volumeInput) {
+                    volumeInput.value = vehicleSettings[val];
+                }
+            }
+        }
+    }
+
     async function loadProvinces() {
         try {
             const res = await fetch('https://provinces.open-api.vn/api/?depth=2');

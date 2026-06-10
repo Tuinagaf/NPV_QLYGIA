@@ -222,13 +222,28 @@ class UserProfile(models.Model):
 
 class CauHinhLoaiXe(models.Model):
     loai_xe = models.CharField(max_length=50, unique=True, verbose_name="Loại xe (Tấn)")
-    so_khoi_mac_dinh = models.CharField(max_length=50, blank=True, null=True, verbose_name="Số khối mặc định")
-    thu_tu = models.IntegerField(default=0, verbose_name="Thứ tự hiển thị")
+    khoi_tu = models.FloatField(blank=True, null=True, verbose_name="Từ khối")
+    khoi_den = models.FloatField(blank=True, null=True, verbose_name="Đến khối")
 
     class Meta:
         verbose_name = "Cấu hình Loại xe & Số khối"
         verbose_name_plural = "Cấu hình Loại xe & Số khối"
-        ordering = ['thu_tu', 'loai_xe']
+        ordering = ['loai_xe']
+
+    def get_so_khoi(self):
+        if self.loai_xe == 'LTL':
+            return 'LTL'
+        if self.khoi_tu is not None and self.khoi_den is not None:
+            tu = int(self.khoi_tu) if self.khoi_tu.is_integer() else self.khoi_tu
+            den = int(self.khoi_den) if self.khoi_den.is_integer() else self.khoi_den
+            return f"{tu}-{den}"
+        elif self.khoi_tu is not None:
+            tu = int(self.khoi_tu) if self.khoi_tu.is_integer() else self.khoi_tu
+            return f">{tu}"
+        elif self.khoi_den is not None:
+            den = int(self.khoi_den) if self.khoi_den.is_integer() else self.khoi_den
+            return f"<{den}"
+        return ""
 
     def __str__(self):
-        return f"{self.loai_xe} -> {self.so_khoi_mac_dinh}"
+        return f"{self.loai_xe} -> {self.get_so_khoi()}"
