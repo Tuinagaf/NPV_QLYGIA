@@ -2601,6 +2601,279 @@ def api_update_user(request, pk):
         data = json.loads(request.body)
         user = User.objects.get(pk=pk)
         
+        if not request.user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'Admin' and user != request.user:
+            return JsonResponse({'success': False, 'error': 'Bạn không thể sửa tài khoản Admin khác'})
+
+        user.first_name = data.get('first_name', user.first_name)
+        user.last_name = data.get('last_name', user.last_name)
+        user.email = data.get('email', user.email)
+        
+        password = data.get('password')
+        if password:
+            user.password = make_password(password)
+            
+        role = data.get('role')
+        if role:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.role = role
+            profile.save()
+            user.is_staff = True if role in ['Admin', 'ThueNgoai'] else False
+            
+        user.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_delete_user(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+        
+    if not (request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.role == 'Admin')):
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        user = User.objects.get(pk=pk)
+        
+        if user == request.user:
+            return JsonResponse({'success': False, 'error': 'Bạn không thể tự xoá tài khoản của chính mình'})
+            
+        if not request.user.is_superuser:
+            if hasattr(user, 'profile'):
+                if user.profile.role == 'Admin' and user.profile.created_by != request.user:
+                    return JsonResponse({'success': False, 'error': 'Bạn không thể xoá tài khoản Admin khác nếu không phải người tạo'})
+                    
+        user.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================================
+# Quản lý Tài Khoản - Trang riêng (page-based, not modal)
+# ============================================================
+
+def _get_core_permissions():
+    """Lấy danh sách quyền của app core có tên tiếng Việt."""
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    vn_names = {
+        'add_doitac': 'Thêm Đối tác',
+        'change_doitac': 'Sửa Đối tác',
+        'delete_doitac': 'Xóa Đối tác',
+        'view_doitac': 'Xem Đối tác',
+        'add_giacoso': 'Thêm Giá cơ sở',
+        'change_giacoso': 'Sửa Giá cơ sở',
+        'delete_giacoso': 'Xóa Giá cơ sở',
+        'view_giacoso': 'Xem Giá cơ sở',
+        'add_dexuatgiacoso': 'Thêm Đề xuất giá cơ sở',
+        'change_dexuatgiacoso': 'Sửa Đề xuất giá cơ sở',
+        'delete_dexuatgiacoso': 'Xóa Đề xuất giá cơ sở',
+        'view_dexuatgiacoso': 'Xem Đề xuất giá cơ sở',
+        'add_tuyenxe': 'Thêm Tuyến xe',
+        'change_tuyenxe': 'Sửa Tuyến xe',
+        'delete_tuyenxe': 'Xóa Tuyến xe',
+        'view_tuyenxe': 'Xem Tuyến xe',
+    }
+    core_ct = ContentType.objects.filter(app_label='core')
+    # Chỉ lấy các quyền chính (thêm, sửa, xóa, xem) cho các model quan trọng
+    allowed_prefixes = ('add_', 'change_', 'delete_', 'view_')
+    important_models = ('doitac', 'giacoso', 'dexuatgiacoso')
+    perms = []
+    for p in Permission.objects.filter(content_type__in=core_ct).order_by('content_type__model', 'codename'):
+        model_name = '_'.join(p.codename.split('_')[1:])
+        if model_name not in important_models:
+            continue
+        p.vn_name = vn_names.get(p.codename, p.name)
+        p.action = p.codename.split('_')[0]
+        p.model = model_name
+        perms.append(p)
+    return perms
+
+
+@login_required
+def account_list(request):
+    """Trang danh sách tài khoản - chỉ Admin Tổng."""
+    if not request.user.is_superuser:
+        messages.error(request, 'Chỉ Admin Tổng mới có quyền truy cập Quản lý tài khoản.')
+        return redirect('search_prices')
+    users = User.objects.all().order_by('-date_joined')
+    return render(request, 'core/account_list.html', {
+        'users': users,
+        'active_count': users.filter(is_active=True).count(),
+        'inactive_count': users.filter(is_active=False).count(),
+        'admin_count': users.filter(is_superuser=True).count(),
+    })
+
+
+@login_required
+def account_create(request):
+    """Trang tạo tài khoản mới."""
+    from django.contrib.auth.models import Permission
+    if not request.user.is_superuser:
+        messages.error(request, 'Chỉ Admin Tổng mới có quyền tạo tài khoản.')
+        return redirect('search_prices')
+
+    core_permissions = _get_core_permissions()
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        perm_ids = [int(p) for p in request.POST.getlist('permissions[]') if p.isdigit()]
+
+        error = None
+        if not username:
+            error = 'Tên đăng nhập là bắt buộc.'
+        elif not password:
+            error = 'Mật khẩu là bắt buộc.'
+        elif len(password) < 6:
+            error = 'Mật khẩu phải có ít nhất 6 ký tự.'
+        elif User.objects.filter(username=username).exists():
+            error = f'Tên đăng nhập "{username}" đã tồn tại.'
+
+        if error:
+            messages.error(request, error)
+            return render(request, 'core/account_form.html', {
+                'title': 'Thêm Tài Khoản Mới',
+                'core_permissions': core_permissions,
+                'user_perms': perm_ids,
+            })
+
+        user = User.objects.create(
+            username=username,
+            password=make_password(password),
+            is_active=True,
+            is_staff=True,
+        )
+        if perm_ids:
+            perms = Permission.objects.filter(id__in=perm_ids)
+            user.user_permissions.set(perms)
+
+        messages.success(request, f'✅ Đã tạo tài khoản "{username}" thành công!')
+        return redirect('account_list')
+
+    return render(request, 'core/account_form.html', {
+        'title': 'Thêm Tài Khoản Mới',
+        'core_permissions': core_permissions,
+        'user_perms': [],
+    })
+
+
+@login_required
+def account_update(request, pk):
+    """Trang chỉnh sửa tài khoản."""
+    from django.contrib.auth.models import Permission
+    if not request.user.is_superuser:
+        messages.error(request, 'Chỉ Admin Tổng mới có quyền sửa tài khoản.')
+        return redirect('search_prices')
+
+    edit_user = get_object_or_404(User, pk=pk)
+    core_permissions = _get_core_permissions()
+    user_perms = list(edit_user.user_permissions.values_list('id', flat=True))
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '').strip()
+        is_active = request.POST.get('is_active') == '1'
+        perm_ids = [int(p) for p in request.POST.getlist('permissions[]') if p.isdigit()]
+
+        if password:
+            if len(password) < 6:
+                messages.error(request, 'Mật khẩu mới phải có ít nhất 6 ký tự.')
+                return render(request, 'core/account_form.html', {
+                    'title': 'Cập Nhật Tài Khoản',
+                    'edit_user': edit_user,
+                    'core_permissions': core_permissions,
+                    'user_perms': user_perms,
+                })
+            edit_user.set_password(password)
+
+        if not edit_user.is_superuser:
+            edit_user.is_active = is_active
+            perms = Permission.objects.filter(id__in=perm_ids)
+            edit_user.user_permissions.set(perms)
+
+        edit_user.save()
+        messages.success(request, f'✅ Đã cập nhật tài khoản "{edit_user.username}" thành công!')
+        return redirect('account_list')
+
+    return render(request, 'core/account_form.html', {
+        'title': 'Cập Nhật Tài Khoản',
+        'edit_user': edit_user,
+        'core_permissions': core_permissions,
+        'user_perms': user_perms,
+    })
+
+
+@login_required
+def api_delete_account(request, pk):
+    """API xóa tài khoản (dùng cho nút Xóa trên trang account_list)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Không có quyền'})
+    try:
+        user = get_object_or_404(User, pk=pk)
+        if user == request.user:
+            return JsonResponse({'success': False, 'error': 'Bạn không thể tự xóa tài khoản của mình'})
+        if user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'Không thể xóa tài khoản Admin Tổng'})
+        user.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+    if not (request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.role == 'Admin')):
+        messages.error(request, 'Bạn không có quyền truy cập trang Quản lý tài khoản.')
+        return redirect('search_prices')
+        
+    users = User.objects.select_related('profile').all().order_by('-date_joined')
+    return render(request, 'core/user_management.html', {'users': users})
+
+@login_required
+def api_create_user(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.role == 'Admin')):
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        email = data.get('email', '')
+        role = data.get('role', 'ThueNgoai')
+        
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'error': 'Tên đăng nhập đã tồn tại'})
+            
+        user = User.objects.create(
+            username=username,
+            password=make_password(password),
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            is_staff=True if role in ['Admin', 'ThueNgoai'] else False
+        )
+        UserProfile.objects.create(user=user, role=role, created_by=request.user)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_update_user(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+        
+    if not (request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.role == 'Admin')):
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        data = json.loads(request.body)
+        user = User.objects.get(pk=pk)
+        
         # Admin restrictions: ThueNgoai can't update Admin
         if not request.user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'Admin' and user != request.user:
             return JsonResponse({'success': False, 'error': 'Bạn không thể sửa tài khoản Admin khác'})

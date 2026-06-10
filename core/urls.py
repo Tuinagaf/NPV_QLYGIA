@@ -42,9 +42,15 @@ urlpatterns = [
     path('api/base-prices/<int:pk>/delete/', views.api_delete_base_price, name='api_delete_base_price'),
     path('api/check-new-proposals/', views.api_check_new_proposals, name='api_check_new_proposals'),
     
-    # User Management
+    # User Management (cũ - modal)
     path('users/', views.user_management_list, name='user_list'),
     path('api/users/create/', views.api_create_user, name='api_create_user'),
     path('api/users/<int:pk>/update/', views.api_update_user, name='api_update_user'),
     path('api/users/<int:pk>/delete/', views.api_delete_user, name='api_delete_user'),
+
+    # Quản lý Tài khoản (mới - trang riêng)
+    path('manage-accounts/', views.account_list, name='account_list'),
+    path('manage-accounts/create/', views.account_create, name='account_create'),
+    path('manage-accounts/<int:pk>/edit/', views.account_update, name='account_update'),
+    path('api/manage-accounts/<int:pk>/delete/', views.api_delete_account, name='api_delete_account'),
 ]

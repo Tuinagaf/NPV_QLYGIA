@@ -29,7 +29,7 @@
             <span id="sidebar-proposal-count" style="background:#ef4444; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; display:none;">0</span>
         </a>
         {% if user.is_superuser or user.profile.role == 'Admin' %}
-        <a href="{% url 'user_list' %}" class="nav-link" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">
+        <a href="{% url 'account_list' %}" class="nav-link" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">
             👥 Quản lý Tài khoản
         </a>
         {% endif %}
