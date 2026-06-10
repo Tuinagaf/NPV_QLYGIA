@@ -49,7 +49,8 @@ jobs:
             # Bước 4: Dừng container cũ, build & khởi chạy lại
             # Dùng 'docker compose' (plugin mới, KHÔNG có gạch ngang)
             docker compose down || true
-            docker compose up -d --build
+            docker compose build --no-cache
+            docker compose up -d
             
             # Đợi một chút để container khởi động và chạy xong collectstatic/migrate
             sleep 10
