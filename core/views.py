@@ -684,6 +684,56 @@ def api_export_base_prices_excel(request):
         ws = wb.active
         ws.title = "Bảng giá cơ sở"
         
+        # Sheet "Data" for dropdowns
+        ws_data = wb.create_sheet(title="Data")
+        ws_data.sheet_state = 'hidden'
+
+        import urllib.request
+        import json
+        from django.core.cache import cache
+        from openpyxl.worksheet.datavalidation import DataValidation
+        from openpyxl.utils import get_column_letter
+
+        provinces_data = cache.get('provinces_data_full')
+        if not provinces_data:
+            try:
+                req = urllib.request.Request('https://provinces.open-api.vn/api/?depth=2', headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    provinces_data = json.loads(response.read().decode())
+                cache.set('provinces_data_full', provinces_data, 86400)
+            except Exception as e:
+                provinces_data = []
+
+        def clean_name(s):
+            return s.replace(" ", "").replace("-", "").replace(".", "")
+
+        province_names = []
+        col_idx = 2
+        for p in provinces_data:
+            p_name = p['name'].replace("Tỉnh ", "").replace("Thành phố ", "")
+            province_names.append(p_name)
+            
+            d_names = [d['name'] for d in p['districts']]
+            ws_data.cell(row=1, column=col_idx, value=p_name)
+            for r_idx, d_name in enumerate(d_names, start=2):
+                ws_data.cell(row=r_idx, column=col_idx, value=d_name)
+            
+            c_letter = get_column_letter(col_idx)
+            ref = f"Data!${c_letter}$2:${c_letter}${len(d_names)+1}"
+            c_name = clean_name(p_name)
+            try:
+                wb.create_named_range(c_name, None, ref)
+            except Exception as e:
+                pass
+            
+            col_idx += 1
+
+        ws_data.cell(row=1, column=1, value="Provinces")
+        for r_idx, p_name in enumerate(province_names, start=2):
+            ws_data.cell(row=r_idx, column=1, value=p_name)
+        
+        wb.create_named_range("AllProvinces", None, f"Data!$A$2:$A${len(province_names)+1}")
+        
         ws.append(["CÔNG TY CỔ PHẦN NHẤT PHONG VẬN"])
         ws.append(["BẢNG GIÁ CƠ SỞ"])
         from datetime import datetime
@@ -728,6 +778,21 @@ def api_export_base_prices_excel(request):
                 cell.font = header_font
                 cell.alignment = align_center
                 cell.border = thin_border
+                
+        # Add Data Validations
+        if province_names:
+            dv_prov = DataValidation(type="list", formula1="=AllProvinces", allow_blank=True)
+            ws.add_data_validation(dv_prov)
+            dv_prov.add('A7:A1000')
+            dv_prov.add('C7:C1000')
+
+            dv_dist_nhan = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(A7, " ", ""), "-", ""), ".", ""))', allow_blank=True)
+            ws.add_data_validation(dv_dist_nhan)
+            dv_dist_nhan.add('B7:B1000')
+
+            dv_dist_giao = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(C7, " ", ""), "-", ""), ".", ""))', allow_blank=True)
+            ws.add_data_validation(dv_dist_giao)
+            dv_dist_giao.add('D7:D1000')
         
         grouped_data = {}
         for g in queryset:
@@ -2490,18 +2555,57 @@ def api_import_base_prices_excel(request):
         wb = openpyxl.load_workbook(excel_file, data_only=True)
         ws = wb.active
         
-        # Mapping col to loaixe
-        loai_xe_map = {
-            6: ("1.25T", "0-6"),
-            7: ("2T", "7-10"),
-            8: ("3.5T", "11-14"),
-            9: ("5T", "15-18"),
-            10: ("7T", "19-28"),
-            11: ("9T", "29-30"),
-            12: ("11T", "31-35"),
-            13: ("15T", "36-40"),
-            14: ("LTL", "LTL")
+        # Read row 5 for dynamic volume configs
+        from core.models import CauHinhLoaiXe
+        
+        loai_xe_columns = {
+            6: "1.25T", 7: "2T", 8: "3.5T", 9: "5T",
+            10: "7T", 11: "9T", 12: "11T", 13: "15T", 14: "LTL"
         }
+        
+        for col_idx, loai_xe in loai_xe_columns.items():
+            if loai_xe == "LTL": continue
+            so_khoi_val = ws.cell(row=5, column=col_idx).value
+            if so_khoi_val is not None:
+                try:
+                    so_khoi_max = float(so_khoi_val)
+                    if so_khoi_max > 0:
+                        CauHinhLoaiXe.objects.update_or_create(
+                            loai_xe=loai_xe,
+                            defaults={'so_khoi_max': so_khoi_max}
+                        )
+                except ValueError:
+                    pass
+        
+        # Dynamically build loai_xe_map
+        loai_xe_map = {}
+        default_max = {
+            "1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18,
+            "7T": 28, "9T": 30, "11T": 35, "15T": 40
+        }
+        prev_max = 0
+        for col_idx, loai_xe in loai_xe_columns.items():
+            if loai_xe == "LTL":
+                loai_xe_map[col_idx] = ("LTL", "LTL")
+                continue
+            
+            cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
+            current_max = cauhinh.so_khoi_max if cauhinh else default_max.get(loai_xe, prev_max + 5)
+            
+            def fmt_num(num):
+                return f"{num:g}"
+            
+            if loai_xe == "1.25T":
+                so_khoi_str = f"0-{fmt_num(current_max)}"
+            else:
+                start_val = prev_max + 1
+                if start_val == current_max:
+                    so_khoi_str = f"{fmt_num(current_max)}"
+                else:
+                    so_khoi_str = f"{fmt_num(start_val)}-{fmt_num(current_max)}"
+                    
+            loai_xe_map[col_idx] = (loai_xe, so_khoi_str)
+            prev_max = current_max
         
         updated_count = 0
         created_count = 0
