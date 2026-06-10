@@ -20,7 +20,24 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd NPV_QLYGIA
+            # Cài đặt Docker nếu chưa có
+            if ! command -v docker &> /dev/null; then
+              sudo apt-get update -y
+              sudo apt-get install docker.io docker-compose -y
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -aG docker $USER
+            fi
+
+            # Clone code nếu lần đầu tiên, hoặc pull code mới nếu đã có
+            if [ ! -d "$HOME/NPV_QLYGIA" ]; then
+              git clone https://github.com/Tuinagaf/NPV_QLYGIA.git $HOME/NPV_QLYGIA
+            fi
+
+            cd $HOME/NPV_QLYGIA
             git pull origin master
-            docker-compose up -d --build
-            docker-compose exec -T web python manage.py migrate
+
+            # Chạy Docker (dùng sudo vì có thể chưa áp dụng được group docker)
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build
+            sudo docker-compose exec -T web python manage.py migrate
