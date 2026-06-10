@@ -661,10 +661,21 @@
 
     function handleLoaiXeInput(input, targetId) {
         const val = input.value;
-        if (val && vehicleSettings[val]) {
+        const normalizedVal = val.toString().toLowerCase().replace(/t$/, '').trim();
+        const defaultMap = {
+            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
+            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'ltl': 'LTL'
+        };
+        
+        let targetVal = vehicleSettings[val];
+        if (!targetVal) {
+            targetVal = defaultMap[normalizedVal];
+        }
+
+        if (val && targetVal) {
             let target = $('#' + targetId);
-            if (target.val() !== vehicleSettings[val]) {
-                target.val(vehicleSettings[val]).trigger('change.select2');
+            if (target.val() !== targetVal) {
+                target.val(targetVal).trigger('change.select2');
             }
         }
     }
