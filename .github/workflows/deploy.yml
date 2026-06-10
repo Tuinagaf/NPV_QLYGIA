@@ -51,4 +51,5 @@ jobs:
             docker compose down || true
             docker compose up -d --build
             docker compose exec -T web python manage.py migrate
+            docker compose exec -T web python manage.py collectstatic --noinput
             docker compose exec -T web sh -c "DJANGO_SUPERUSER_PASSWORD=admin python manage.py createsuperuser --noinput --username admin --email admin@example.com || true"
