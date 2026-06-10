@@ -2583,6 +2583,13 @@ def api_import_base_prices_excel(request):
             10: "7T", 11: "9T", 12: "11T", 13: "15T", 14: "LTL"
         }
         
+        loai_xe_map = {}
+        default_max = {
+            "1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18,
+            "7T": 28, "9T": 30, "11T": 35, "15T": 40
+        }
+        prev_max = 0
+        
         for col_idx, loai_xe in loai_xe_columns.items():
             if loai_xe == "LTL":
                 loai_xe_map[col_idx] = ("LTL", "LTL")
