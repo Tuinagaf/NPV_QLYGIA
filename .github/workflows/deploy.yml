@@ -50,6 +50,9 @@ jobs:
             # Dùng 'docker compose' (plugin mới, KHÔNG có gạch ngang)
             docker compose down || true
             docker compose up -d --build
-            docker compose exec -T web python manage.py migrate
-            docker compose exec -T web python manage.py collectstatic --noinput
+            
+            # Đợi một chút để container khởi động và chạy xong collectstatic/migrate
+            sleep 10
+            
+            # Tạo superuser (nếu chưa có)
             docker compose exec -T web sh -c "DJANGO_SUPERUSER_PASSWORD=admin python manage.py createsuperuser --noinput --username admin --email admin@example.com || true"
