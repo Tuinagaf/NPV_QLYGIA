@@ -758,7 +758,17 @@ def api_export_base_prices_excel(request):
         ws["A3"].alignment = align_center
         
         row5 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T", "LTL"]
-        row6 = ["", "", "", "", "Số khối", "6", "10", "14", "18", "28", "30", "35", "40", "LTL"]
+        
+        from core.models import CauHinhLoaiXe
+        default_max = {"1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18, "7T": 28, "9T": 30, "11T": 35, "15T": 40}
+        row6 = ["", "", "", "", "Số khối"]
+        for lx in ["1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T"]:
+            ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
+            if ch and ch.khoi_den is not None:
+                row6.append(f"{ch.khoi_den:g}")
+            else:
+                row6.append(str(default_max[lx]))
+        row6.append("LTL")
         ws.append(row5)
         ws.append(row6)
         
@@ -2474,7 +2484,17 @@ def api_download_base_price_template(request):
         ws["A2"].alignment = align_center
 
         row4 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T", "LTL"]
-        row5 = ["", "", "", "", "Số khối", "6", "10", "14", "18", "28", "30", "35", "40", "LTL"]
+        
+        from core.models import CauHinhLoaiXe
+        default_max = {"1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18, "7T": 28, "9T": 30, "11T": 35, "15T": 40}
+        row5 = ["", "", "", "", "Số khối"]
+        for lx in ["1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T"]:
+            ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
+            if ch and ch.khoi_den is not None:
+                row5.append(f"{ch.khoi_den:g}")
+            else:
+                row5.append(str(default_max[lx]))
+        row5.append("LTL")
         ws.append(row4)
         ws.append(row5)
 
@@ -2564,45 +2584,41 @@ def api_import_base_prices_excel(request):
         }
         
         for col_idx, loai_xe in loai_xe_columns.items():
-            if loai_xe == "LTL": continue
-            so_khoi_val = ws.cell(row=5, column=col_idx).value
-            if so_khoi_val is not None:
-                try:
-                    so_khoi_max = float(so_khoi_val)
-                    if so_khoi_max > 0:
-                        CauHinhLoaiXe.objects.update_or_create(
-                            loai_xe=loai_xe,
-                            defaults={'so_khoi_max': so_khoi_max}
-                        )
-                except ValueError:
-                    pass
-        
-        # Dynamically build loai_xe_map
-        loai_xe_map = {}
-        default_max = {
-            "1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18,
-            "7T": 28, "9T": 30, "11T": 35, "15T": 40
-        }
-        prev_max = 0
-        for col_idx, loai_xe in loai_xe_columns.items():
             if loai_xe == "LTL":
                 loai_xe_map[col_idx] = ("LTL", "LTL")
                 continue
-            
+                
+            so_khoi_val = ws.cell(row=5, column=col_idx).value
             cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
-            current_max = cauhinh.so_khoi_max if cauhinh else default_max.get(loai_xe, prev_max + 5)
+            
+            if so_khoi_val is not None:
+                try:
+                    current_max = float(so_khoi_val)
+                except ValueError:
+                    current_max = cauhinh.khoi_den if cauhinh and cauhinh.khoi_den is not None else default_max.get(loai_xe, prev_max + 5)
+            else:
+                current_max = cauhinh.khoi_den if cauhinh and cauhinh.khoi_den is not None else default_max.get(loai_xe, prev_max + 5)
+                
+            if loai_xe == "1.25T":
+                khoi_tu = 0
+            else:
+                khoi_tu = prev_max + 1
+                
+            CauHinhLoaiXe.objects.update_or_create(
+                loai_xe=loai_xe,
+                defaults={'khoi_tu': khoi_tu, 'khoi_den': current_max}
+            )
             
             def fmt_num(num):
                 return f"{num:g}"
-            
+                
             if loai_xe == "1.25T":
                 so_khoi_str = f"0-{fmt_num(current_max)}"
             else:
-                start_val = prev_max + 1
-                if start_val == current_max:
+                if khoi_tu == current_max:
                     so_khoi_str = f"{fmt_num(current_max)}"
                 else:
-                    so_khoi_str = f"{fmt_num(start_val)}-{fmt_num(current_max)}"
+                    so_khoi_str = f"{fmt_num(khoi_tu)}-{fmt_num(current_max)}"
                     
             loai_xe_map[col_idx] = (loai_xe, so_khoi_str)
             prev_max = current_max
