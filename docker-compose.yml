@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && gunicorn qlygia.wsgi:application --bind 0.0.0.0:8000"
+    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && gunicorn qlygia.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2"
     volumes:
       - .:/app
     ports:
