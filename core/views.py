@@ -2561,23 +2561,27 @@ def api_download_base_price_template(request):
         for i in range(len(tpl_active_types)):
             ws.column_dimensions[gcl2(6 + i)].width = 16
             
-        # Read column headers from row 4 (vehicle names) dynamically
+        # ----------------------------------------------------------------
+        # ĐỌC CỘT LOẠI XE ĐỘNG TỪ FILE EXCEL (không hardcode vị trí)
+        # ----------------------------------------------------------------
+        # File template: dòng 4 = tên loại xe, dòng 5 = giá trị so_khoi (khoi_den)
+        # File export  : dòng 5 = tên loại xe, dòng 6 = giá trị so_khoi (khoi_den)
+        # Chúng ta detect tự động bằng cách kiểm tra ô đầu tiên của cột 6.
+        # ----------------------------------------------------------------
         from core.models import CauHinhLoaiXe, GiaCoSo, DeXuatGiaCoSo
         
         loai_xe_map = {}  # col_idx -> (loai_xe, so_khoi_str)
         
-        # Detect template (row4=header) vs export file (row5=header, row6=so_khoi)
-        # In template: row4 has vehicle names; in export: row5 has vehicle names
-        row4_e = ws.cell(row=4, column=6).value  # first vehicle col in row4
-        row5_e = ws.cell(row=5, column=6).value  # first vehicle col in row5
-        
-        if row4_e and str(row4_e).strip() in ['LTL', '1.25T', '2T', '2.5T', '3.5T', '5T']:
-            header_row = 4
-            so_khoi_row = 5
+        # Phát hiện định dạng file: template (row4 = header) hay export (row5 = header)
+        row4_e = ws.cell(row=4, column=6).value
+        if row4_e and str(row4_e).strip() in ['LTL', '1.25T', '2T', '2.5T', '3.5T', '5T',
+                                                '7T', '8T', '9T', '15T', '8-15T']:
+            header_row = 4   # File template
+            so_khoi_row = 5  # Dòng số khối trong template
             first_data_row = 6
         else:
-            header_row = 5
-            so_khoi_row = 6
+            header_row = 5   # File export (có thêm dòng ngày ở đầu)
+            so_khoi_row = 6  # Dòng số khối trong export
             first_data_row = 7
         
         for col_idx in range(6, ws.max_column + 1):
@@ -2585,31 +2589,56 @@ def api_download_base_price_template(request):
             if not header_val:
                 continue
             loai_xe = str(header_val).strip()
+            # Ô so_khoi trong file Excel chứa giá trị khoi_den (VD: 9, 13, 54...)
             so_khoi_val = ws.cell(row=so_khoi_row, column=col_idx).value
             
             if loai_xe == 'LTL':
                 loai_xe_map[col_idx] = ('LTL', 'LTL')
                 continue
             
-            # If row 5 has a numeric value, use it to update CauHinhLoaiXe
+            # ----------------------------------------------------------------
+            # LOGIC CẬP NHẬT CauHinhLoaiXe:
+            # Nếu người dùng thay đổi giá trị ở dòng "Số khối" trong file Excel
+            # → chúng ta chỉ cập nhật khoi_den (giá trị tối đa).
+            # khoi_tu (giá trị bắt đầu) được GIỮ NGUYÊN từ DB — không tự tính lại —
+            # vì mỗi loại xe có điểm bắt đầu riêng đã được admin cấu hình thủ công.
+            #
+            # Ví dụ chuỗi lũy tiến đã thiết lập trong DB:
+            #   1.25T : 0  → 9   (0-9)
+            #   2.5T  : 9  → 13  (9-13)
+            #   3.5T  : 13 → 18  (13-18)
+            #   5T    : 18 → 23  (18-23)
+            #   7T    : 23 → 35  (23-35)
+            #   9T    : 35 → 40  (35-40)  ← tiếp nối từ 7T, BỎ QUA 8T
+            #   8T    : 40 → 54  (40-54)  ← sau 9T
+            #   15T   : 40 → 54  (40-54)  ← cùng khoảng với 8T (cùng loại thùng xe)
+            # ----------------------------------------------------------------
             if so_khoi_val is not None:
                 try:
                     new_max = float(so_khoi_val)
+                    # Lấy khoi_tu hiện có trong DB (KHÔNG tính lại từ xe trước)
                     cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
                     khoi_tu_val = cauhinh.khoi_tu if cauhinh and cauhinh.khoi_tu is not None else 0
                     CauHinhLoaiXe.objects.update_or_create(
                         loai_xe=loai_xe,
-                        defaults={'khoi_tu': khoi_tu_val, 'khoi_den': new_max}
+                        defaults={
+                            'khoi_tu': khoi_tu_val,  # Giữ nguyên điểm bắt đầu
+                            'khoi_den': new_max       # Cập nhật điểm kết thúc
+                        }
                     )
                 except (ValueError, TypeError):
-                    pass
+                    pass  # Nếu ô Excel không phải số thì bỏ qua, dùng giá trị DB cũ
             
+            # Đọc lại từ DB sau khi đã cập nhật để lấy chuỗi so_khoi chính xác
             cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
             so_khoi_str = cauhinh.get_so_khoi() if cauhinh else str(so_khoi_val or '')
             loai_xe_map[col_idx] = (loai_xe, so_khoi_str)
-            
-        # Sync so_khoi for all existing records
-        from core.models import GiaCoSo, DeXuatGiaCoSo
+        
+        # ----------------------------------------------------------------
+        # Đồng bộ lại cột so_khoi cho TẤT CẢ bản ghi GiaCoSo và DeXuatGiaCoSo
+        # hiện có trong DB theo chuỗi mới. Điều này đảm bảo dữ liệu cũ
+        # cũng được cập nhật khi admin upload lại file Excel.
+        # ----------------------------------------------------------------
         for col_idx, (loai_xe, so_khoi_str) in loai_xe_map.items():
             if loai_xe != 'LTL':
                 GiaCoSo.objects.filter(loai_xe=loai_xe).update(so_khoi=so_khoi_str)

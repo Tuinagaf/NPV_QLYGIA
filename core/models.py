@@ -221,8 +221,34 @@ class UserProfile(models.Model):
         return f"{self.user.username} - {self.role}"
 
 class CauHinhLoaiXe(models.Model):
+    """
+    Model lưu cấu hình khoảng số khối cho từng loại xe.
+
+    Nguyên tắc thiết kế chuỗi lũy tiến:
+    - Mỗi loại xe có một khoảng số khối (khoi_tu → khoi_den).
+    - Chuỗi được sắp xếp theo trọng tải tăng dần, điểm đầu của xe sau
+      bằng điểm cuối của xe trước. Ví dụ:
+        1.25T : 0  → 9    hiển thị "0-9"
+        2.5T  : 9  → 13   hiển thị "9-13"
+        3.5T  : 13 → 18   hiển thị "13-18"
+        5T    : 18 → 23   hiển thị "18-23"
+        7T    : 23 → 35   hiển thị "23-35"
+        9T    : 35 → 40   hiển thị "35-40"  ← tiếp từ 7T, BỎ QUA 8T
+        8T    : 40 → 54   hiển thị "40-54"  ← sau 9T
+        15T   : 40 → 54   hiển thị "40-54"  ← cùng khoảng với 8T
+                                               (8T và 15T dùng chung loại thùng xe 54 khối)
+
+    Lưu ý đặc biệt (8T & 15T):
+    - 8T và 15T là cùng một loại thùng xe (54 khối), chỉ khác tải trọng.
+    - Cả hai đều có khoi_tu=40, khoi_den=54, tức là hiển thị "40-54".
+    - Khi lọc theo số khối "40-54", kết quả sẽ trả về cả 8T lẫn 15T.
+    - Việc thay đổi khoi_den (ví dụ từ 54 → 60) cho một trong hai xe
+      sẽ KHÔNG ảnh hưởng xe còn lại, vì khoi_tu được giữ riêng biệt trong DB.
+    """
     loai_xe = models.CharField(max_length=50, unique=True, verbose_name="Loại xe (Tấn)")
+    # khoi_tu: điểm bắt đầu của khoảng số khối (thường = khoi_den của xe trước)
     khoi_tu = models.FloatField(blank=True, null=True, verbose_name="Từ khối")
+    # khoi_den: điểm kết thúc (giá trị số khối tối đa mà xe này chở được)
     khoi_den = models.FloatField(blank=True, null=True, verbose_name="Đến khối")
 
     class Meta:
@@ -231,6 +257,13 @@ class CauHinhLoaiXe(models.Model):
         ordering = ['loai_xe']
 
     def get_so_khoi(self):
+        """
+        Trả về chuỗi hiển thị số khối.
+        - LTL       → "LTL"
+        - khoi_tu == khoi_den → chỉ trả về một số (VD: "54")
+        - khoi_tu != khoi_den → trả về khoảng (VD: "40-54")
+        - Chỉ có khoi_den     → trả về đúng số đó
+        """
         if self.loai_xe == 'LTL':
             return 'LTL'
         if self.khoi_tu is not None and self.khoi_den is not None:
@@ -249,3 +282,4 @@ class CauHinhLoaiXe(models.Model):
 
     def __str__(self):
         return f"{self.loai_xe} -> {self.get_so_khoi()}"
+
