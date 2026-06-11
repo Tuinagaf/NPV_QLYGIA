@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/base-prices/export/', views.api_export_base_prices_excel, name='api_export_base_prices_excel'),
     path('api/base-prices/template/', views.api_download_base_price_template, name='api_download_base_price_template'),
     path('api/base-prices/import/', views.api_import_base_prices_excel, name='api_import_base_prices_excel'),
+    path('api/base-prices/bulk-delete/', views.api_bulk_delete_base_prices, name='api_bulk_delete_base_prices'),
     
     # Search Prices URLs
     path('api/search-prices/', views.api_search_prices, name='api_search_prices'),
@@ -59,5 +60,6 @@ urlpatterns = [
     path('settings/vehicles/', views.settings_vehicle_list, name='settings_vehicle_list'),
     path('api/settings/vehicles/save/', views.api_save_vehicle_setting, name='api_save_vehicle_setting'),
     path('api/settings/vehicles/<int:pk>/delete/', views.api_delete_vehicle_setting, name='api_delete_vehicle_setting'),
+    path('api/settings/vehicles/bulk-delete/', views.api_bulk_delete_vehicle_settings, name='api_bulk_delete_vehicle_settings'),
     path('api/settings/vehicles/get/', views.api_get_vehicle_settings, name='api_get_vehicle_settings'),
 ]

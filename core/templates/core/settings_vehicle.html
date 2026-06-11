@@ -45,10 +45,15 @@
         <h1>Cấu Hình Tải Trọng & Số Khối</h1>
         <p>Thiết lập danh sách các Loại xe và mức Số khối tự động tương ứng</p>
     </div>
-    <button class="btn-create" onclick="openModal()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-        Thêm Loại Xe Mới
-    </button>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button id="btnBulkDeleteSettings" class="btn-primary" style="background: #ef4444; border-color: #ef4444; display: none; padding: 10px 22px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; color: white; transition: background 0.2s;" onclick="bulkDeleteSettings()">
+            <i class="fa fa-trash"></i> Xóa đã chọn
+        </button>
+        <button class="btn-create" onclick="openModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            Thêm Loại Xe Mới
+        </button>
+    </div>
 </div>
 
 <div class="table-wrapper">
@@ -56,6 +61,7 @@
         <table class="acc-table">
             <thead>
                 <tr>
+                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllSettings" onclick="toggleAllSettings()" style="cursor: pointer;"></th>
                     <th style="width: 80px; text-align: center;">ID</th>
                     <th>Loại Xe / Tải Trọng</th>
                     <th>Số Khối Cấu Hình</th>
@@ -65,6 +71,7 @@
             <tbody>
                 {% for item in settings %}
                 <tr>
+                    <td style="text-align: center;"><input type="checkbox" class="setting-checkbox" value="{{ item.id }}" onchange="updateBulkDeleteSettingsBtn()" style="cursor: pointer;"></td>
                     <td style="text-align: center; color: #94a3b8; font-weight: 600;">{{ item.id }}</td>
                     <td style="font-weight: 600; color: #0284c7;">{{ item.loai_xe }}</td>
                     <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 500;">{{ item.get_so_khoi|default:"(Trống)" }}</span></td>
@@ -75,7 +82,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">
                         <div style="font-size: 2rem; margin-bottom: 10px;">⚙️</div>
                         Chưa có cấu hình nào. Hãy thêm mới!
                     </td>
@@ -99,18 +106,20 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Loại xe (Tải trọng) *</label>
-                    <select id="loai_xe" name="loai_xe" class="form-control" required>
-                        <option value="">Chọn loại xe</option>
-                        <option value="1.25T">1.25T</option>
-                        <option value="2T">2T</option>
-                        <option value="3.5T">3.5T</option>
-                        <option value="5T">5T</option>
-                        <option value="7T">7T</option>
-                        <option value="9T">9T</option>
-                        <option value="11T">11T</option>
-                        <option value="15T">15T</option>
-                        <option value="LTL">LTL</option>
-                    </select>
+                    <input type="text" id="loai_xe" name="loai_xe" class="form-control" required list="loaiXeOptions" placeholder="Nhập hoặc chọn loại xe (VD: 2.5T)">
+                    <datalist id="loaiXeOptions">
+                        <option value="1.25T">
+                        <option value="2T">
+                        <option value="2.5T">
+                        <option value="3.5T">
+                        <option value="5T">
+                        <option value="7T">
+                        <option value="8T">
+                        <option value="9T">
+                        <option value="11T">
+                        <option value="15T">
+                        <option value="LTL">
+                    </datalist>
                 </div>
                 <div class="form-group" style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
@@ -203,11 +212,74 @@ async function deleteSetting(id, name) {
             if (result.success) {
                 await Swal.fire({ title: 'Đã xóa!', icon: 'success', timer: 1500, showConfirmButton: false });
                 window.location.reload();
+                } else {
+                    Swal.fire('Lỗi', result.error || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Lỗi', 'Có lỗi xảy ra khi xóa!', 'error');
+            }
+        }
+    }
+
+function toggleAllSettings() {
+    const selectAll = document.getElementById('selectAllSettings');
+    const checkboxes = document.querySelectorAll('.setting-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteSettingsBtn();
+}
+
+function updateBulkDeleteSettingsBtn() {
+    const checkedCount = document.querySelectorAll('.setting-checkbox:checked').length;
+    const btn = document.getElementById('btnBulkDeleteSettings');
+    if (btn) {
+        btn.style.display = checkedCount > 0 ? 'inline-block' : 'none';
+    }
+}
+
+async function bulkDeleteSettings() {
+    const checkboxes = document.querySelectorAll('.setting-checkbox:checked');
+    if (checkboxes.length === 0) return;
+    
+    const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+    
+    const result = await Swal.fire({
+        title: 'Xóa cấu hình?',
+        text: `Bạn có chắc chắn muốn xóa ${checkboxes.length} loại xe đã chọn? Hành động này sẽ xóa cả giá cơ sở tương ứng!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Có, Xóa tất cả!',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            formData.append('ids', ids);
+            
+            const response = await fetch('/api/settings/vehicles/bulk-delete/', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Đã xóa!',
+                    text: 'Các loại xe đã chọn đã được xóa khỏi hệ thống.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
             } else {
-                Swal.fire('Lỗi', result.error || 'Không thể xóa', 'error');
+                Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
             }
         } catch (e) {
-            Swal.fire('Lỗi', 'Mất kết nối máy chủ', 'error');
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
         }
     }
 }

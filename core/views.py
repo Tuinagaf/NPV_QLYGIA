@@ -3214,3 +3214,37 @@ def api_get_vehicle_settings(request):
         return JsonResponse({'success': True, 'data': data, 'ordered_types': ordered_types})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_bulk_delete_base_prices(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False})
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    ids = request.POST.get('ids', '')
+    if not ids:
+        return JsonResponse({'success': False, 'error': 'No ids provided'})
+    try:
+        from core.models import GiaCoSo
+        id_list = [int(i) for i in ids.split(',') if i.isdigit()]
+        GiaCoSo.objects.filter(id__in=id_list).delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def api_bulk_delete_vehicle_settings(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False})
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    ids = request.POST.get('ids', '')
+    if not ids:
+        return JsonResponse({'success': False, 'error': 'No ids provided'})
+    try:
+        from core.models import CauHinhLoaiXe
+        id_list = [int(i) for i in ids.split(',') if i.isdigit()]
+        CauHinhLoaiXe.objects.filter(id__in=id_list).delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

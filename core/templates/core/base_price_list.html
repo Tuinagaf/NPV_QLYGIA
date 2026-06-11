@@ -9,6 +9,7 @@
     </div>
     {% if request.user.is_superuser %}
     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+        <button id="btnBulkDelete" class="btn-primary" style="background: #ef4444; border-color: #ef4444; display: none;" onclick="bulkDeleteBasePrices()"><i class="fa fa-trash"></i> Xóa đã chọn</button>
         <button class="btn-primary" style="background: #64748b; border-color: #64748b;" onclick="downloadTemplate()"><i class="fa fa-download"></i> Tải File Mẫu</button>
         <button class="btn-primary" style="background: #10b981; border-color: #10b981;" onclick="document.getElementById('importExcelInput').click()"><i class="fa fa-upload"></i> Nhập Excel</button>
         <input type="file" id="importExcelInput" accept=".xlsx" style="display: none;" onchange="importExcel(this)">
@@ -410,7 +411,7 @@
                     html += `
                         <tr style="border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="openHistoryModal(${item.id})" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
                             <td style="padding: 15px 10px; text-align: center;" onclick="event.stopPropagation()">
-                                <input type="checkbox" class="row-checkbox" value="${item.id}">
+                                <input type="checkbox" class="row-checkbox" value="${item.id}" onchange="updateBulkDeleteButton()">
                             </td>
                             <td style="padding: 15px 20px;">${item.tinh_nhan}</td>
                             <td style="padding: 15px 20px;">${item.huyen_nhan}</td>
@@ -815,6 +816,70 @@
         } catch (error) {
             console.error(error);
             Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+        }
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAllCheckbox');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkDeleteButton();
+    }
+
+    function updateBulkDeleteButton() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        const btnBulkDelete = document.getElementById('btnBulkDelete');
+        if (btnBulkDelete) {
+            btnBulkDelete.style.display = checkedCount > 0 ? 'inline-block' : 'none';
+        }
+    }
+
+    async function bulkDeleteBasePrices() {
+        const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+        if (checkboxes.length === 0) return;
+        
+        const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+        
+        const result = await Swal.fire({
+            title: 'Xóa giá cơ sở?',
+            text: `Bạn có chắc chắn muốn xóa ${checkboxes.length} giá cơ sở đã chọn? Hành động này sẽ không thể hoàn tác!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Có, Xóa tất cả!',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                formData.append('ids', ids);
+                
+                const response = await fetch('/api/base-prices/bulk-delete/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Đã xóa!',
+                        text: 'Các giá cơ sở đã chọn đã được xóa.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        document.getElementById('selectAllCheckbox').checked = false;
+                        updateBulkDeleteButton();
+                        loadBasePrices();
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+            }
         }
     }
 </script>
