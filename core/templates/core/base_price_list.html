@@ -45,31 +45,12 @@
             <label class="form-label" style="font-size: 0.8rem">Loại xe</label>
             <select id="filterLoaiXe" class="form-control">
                 <option value="">Tất cả</option>
-                <option value="1.25T">1.25T</option>
-                <option value="2T">2T</option>
-                <option value="3.5T">3.5T</option>
-                <option value="5T">5T</option>
-                <option value="7T">7T</option>
-                <option value="9T">9T</option>
-                <option value="11T">11T</option>
-                <option value="15T">15T</option>
-                <option value="LTL">LTL</option>
             </select>
         </div>
         <div>
             <label class="form-label" style="font-size: 0.8rem">Số khối</label>
             <select id="filterKhoi" class="form-control">
                 <option value="">Tất cả</option>
-                <option value="0-6">0-6</option>
-                <option value="7-10">7-10</option>
-                <option value="11-14">11-14</option>
-                <option value="15-18">15-18</option>
-                <option value="19-28">19-28</option>
-                <option value="29-30">29-30</option>
-                <option value="31-35">31-35</option>
-                <option value="36-40">36-40</option>
-                <option value=">40">>40</option>
-                <option value="LTL">LTL</option>
             </select>
         </div>
         <div>
@@ -138,15 +119,7 @@
                         <label class="form-label">Loại xe *</label>
                         <select id="addLoaiXe" name="loai_xe" class="form-control" required onchange="handleLoaiXeInput(this, 'addSoKhoi')">
                             <option value="">Chọn loại xe</option>
-                            <option value="1.25T">1.25T</option>
-                            <option value="2T">2T</option>
-                            <option value="3.5T">3.5T</option>
-                            <option value="5T">5T</option>
-                            <option value="7T">7T</option>
-                            <option value="9T">9T</option>
-                            <option value="11T">11T</option>
-                            <option value="15T">15T</option>
-                            <option value="LTL">LTL</option>
+                            <!-- populated dynamically by JS -->
                         </select>
                     </div>
                     <div>
@@ -261,42 +234,35 @@
             const result = await res.json();
             if (result.success) {
                 vehicleSettings = result.data;
+                const orderedTypes = result.ordered_types || Object.keys(result.data);
+                
+                const filterLoaiXeEl = $('#filterLoaiXe');
+                const addLoaiXeEl = $('#addLoaiXe');
                 const soKhoiSelect = $('#addSoKhoi');
                 const filterKhoiSelect = $('#filterKhoi');
                 
-                const currentAddVal = soKhoiSelect.val();
-                const currentFilterVal = filterKhoiSelect.val();
-                
-                soKhoiSelect.empty().append('<option value="">Chọn số khối</option>');
-                if (filterKhoiSelect.length) {
-                    filterKhoiSelect.empty().append('<option value="">Tất cả</option>');
-                }
-                
-                const uniqueSoKhoi = new Set(['0-6', '7-10', '11-14', '15-18', '19-28', '29-30', '31-35', '36-40', '>40', 'LTL']);
-                for (const khoi of Object.values(vehicleSettings)) {
-                    if (khoi) uniqueSoKhoi.add(khoi);
-                }
-                
-                const sortedKhoi = Array.from(uniqueSoKhoi).sort((a, b) => {
-                    if (a === 'LTL') return 1;
-                    if (b === 'LTL') return -1;
-                    const numA = parseFloat(a.split('-')[0].replace(/[^0-9.]/g, ''));
-                    const numB = parseFloat(b.split('-')[0].replace(/[^0-9.]/g, ''));
-                    return numA - numB;
+                // Rebuild Loai Xe options
+                filterLoaiXeEl.empty().append('<option value="">Tất cả</option>');
+                addLoaiXeEl.empty().append('<option value="">Chọn loại xe</option>');
+                orderedTypes.forEach(lx => {
+                    filterLoaiXeEl.append(new Option(lx, lx));
+                    addLoaiXeEl.append(new Option(lx, lx));
                 });
-
-                sortedKhoi.forEach(khoi => {
-                    soKhoiSelect.append(new Option(khoi, khoi));
-                    if (filterKhoiSelect.length) {
+                filterLoaiXeEl.trigger('change.select2');
+                addLoaiXeEl.trigger('change.select2');
+                
+                // Rebuild So Khoi options
+                soKhoiSelect.empty().append('<option value="">Chọn số khối</option>');
+                filterKhoiSelect.empty().append('<option value="">Tất cả</option>');
+                orderedTypes.forEach(lx => {
+                    const khoi = vehicleSettings[lx];
+                    if (khoi) {
+                        soKhoiSelect.append(new Option(khoi, khoi));
                         filterKhoiSelect.append(new Option(khoi, khoi));
                     }
                 });
-                
-                if (uniqueSoKhoi.has(currentAddVal)) soKhoiSelect.val(currentAddVal);
-                if (uniqueSoKhoi.has(currentFilterVal) && filterKhoiSelect.length) filterKhoiSelect.val(currentFilterVal);
-                
                 soKhoiSelect.trigger('change.select2');
-                if (filterKhoiSelect.length) filterKhoiSelect.trigger('change.select2');
+                filterKhoiSelect.trigger('change.select2');
             }
         } catch (e) {
             console.error('Failed to load vehicle settings', e);
@@ -661,17 +627,7 @@
 
     function handleLoaiXeInput(input, targetId) {
         const val = input.value;
-        const normalizedVal = val.toString().toLowerCase().replace(/t$/, '').trim();
-        const defaultMap = {
-            '1.25': '0-6', '2': '7-10', '3.5': '11-14', '5': '15-18',
-            '7': '19-28', '9': '29-30', '11': '31-35', '15': '36-40', 'ltl': 'LTL'
-        };
-        
         let targetVal = vehicleSettings[val];
-        if (!targetVal) {
-            targetVal = defaultMap[normalizedVal];
-        }
-
         if (val && targetVal) {
             let target = $('#' + targetId);
             if (target.val() !== targetVal) {

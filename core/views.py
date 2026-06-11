@@ -757,21 +757,32 @@ def api_export_base_prices_excel(request):
         ws["A3"].font = date_font
         ws["A3"].alignment = align_center
         
-        row5 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T", "LTL"]
-        
         from core.models import CauHinhLoaiXe
-        default_max = {"1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23, "7T": 35, "8T": 54, "9T": 40, "15T": 54}
+        import re
+
+        def tonnage_key(loai_xe_str):
+            if loai_xe_str == 'LTL': return 9999
+            m = re.search(r'[\d.]+', loai_xe_str)
+            return float(m.group()) if m else 9998
+
+        # Build dynamic vehicle columns from DB
+        all_cauhinh = sorted(CauHinhLoaiXe.objects.all(), key=lambda x: tonnage_key(x.loai_xe))
+        active_types = [ch.loai_xe for ch in all_cauhinh if ch.loai_xe != 'LTL'] + ['LTL']
+        
+        row5 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe"] + active_types
         row6 = ["", "", "", "", "Số khối"]
-        for lx in ["1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T"]:
-            ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
-            if ch and ch.khoi_den is not None:
-                row6.append(f"{ch.khoi_den:g}")
+        for lx in active_types:
+            if lx == 'LTL':
+                row6.append('LTL')
             else:
-                row6.append(str(default_max[lx]))
-        row6.append("LTL")
+                ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
+                row6.append(ch.get_so_khoi() if ch else lx)
+        
+        total_cols = 5 + len(active_types)
+        lx_cols = {lx: (6 + i) for i, lx in enumerate(active_types)}
+        
         ws.append(row5)
         ws.append(row6)
-        
         ws.merge_cells("A5:A6")
         ws.merge_cells("B5:B6")
         ws.merge_cells("C5:C6")
@@ -780,29 +791,27 @@ def api_export_base_prices_excel(request):
         header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-        
         for r in [5, 6]:
-            for c in range(1, 15):
+            for c in range(1, total_cols + 1):
                 cell = ws.cell(row=r, column=c)
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = align_center
                 cell.border = thin_border
-                
+        
         # Add Data Validations
         if province_names:
             dv_prov = DataValidation(type="list", formula1="=AllProvinces", allow_blank=True)
             ws.add_data_validation(dv_prov)
             dv_prov.add('A7:A1000')
             dv_prov.add('C7:C1000')
-
             dv_dist_nhan = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(A7, " ", ""), "-", ""), ".", ""))', allow_blank=True)
             ws.add_data_validation(dv_dist_nhan)
             dv_dist_nhan.add('B7:B1000')
-
             dv_dist_giao = DataValidation(type="list", formula1='=INDIRECT(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(C7, " ", ""), "-", ""), ".", ""))', allow_blank=True)
             ws.add_data_validation(dv_dist_giao)
             dv_dist_giao.add('D7:D1000')
+
         
         grouped_data = {}
         for g in queryset:
@@ -810,11 +819,6 @@ def api_export_base_prices_excel(request):
             if route_key not in grouped_data:
                 grouped_data[route_key] = {}
             grouped_data[route_key][g.loai_xe.strip()] = g.gia_co_so
-            
-        lx_cols = {
-            "1.25T": 6, "2.5T": 7, "3.5T": 8, "5T": 9,
-            "7T": 10, "8T": 11, "9T": 12, "15T": 13, "LTL": 14
-        }
         
         sorted_routes = sorted(grouped_data.keys(), key=lambda x: (x[0], x[1], x[2], x[3]))
         
@@ -824,7 +828,7 @@ def api_export_base_prices_excel(request):
         row_idx = 7
         for route_key in sorted_routes:
             prices = grouped_data[route_key]
-            row_data = [route_key[0], route_key[1], route_key[2], route_key[3], ""] + [""] * 9
+            row_data = [route_key[0], route_key[1], route_key[2], route_key[3], ""] + [""] * len(active_types)
             for lx, price in prices.items():
                 col_idx = lx_cols.get(lx)
                 if col_idx:
@@ -832,7 +836,7 @@ def api_export_base_prices_excel(request):
             ws.append(row_data)
             
             current_fill = fill_even if row_idx % 2 == 0 else fill_odd
-            for c in range(1, 15):
+            for c in range(1, total_cols + 1):
                 cell = ws.cell(row=row_idx, column=c)
                 cell.fill = current_fill
                 cell.border = thin_border
@@ -843,12 +847,13 @@ def api_export_base_prices_excel(request):
         for col_letter in ['A', 'B', 'C', 'D']:
             ws.column_dimensions[col_letter].width = 20
         ws.column_dimensions['E'].width = 12
-        for col_letter in ['F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']:
-            ws.column_dimensions[col_letter].width = 16
+        from openpyxl.utils import get_column_letter as gcl
+        for i in range(len(active_types)):
+            ws.column_dimensions[gcl(6 + i)].width = 16
             
-        # Format empty rows for prices (columns F to M)
+        # Format price cells dynamically
         for row in range(6, 1001):
-            for col in range(6, 14):
+            for col in range(6, 6 + len(active_types)):
                 c = ws.cell(row=row, column=col)
                 c.number_format = '#,##0'
                 c.alignment = Alignment(horizontal='right', vertical='center')
@@ -2490,18 +2495,30 @@ def api_download_base_price_template(request):
         ws["A2"].font = subtitle_font
         ws["A2"].alignment = align_center
 
-        row4 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T", "LTL"]
+        row4 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe"]
         
         from core.models import CauHinhLoaiXe
-        default_max = {"1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23, "7T": 35, "8T": 54, "9T": 40, "15T": 54}
+        import re
+
+        def tonnage_key(loai_xe_str):
+            if loai_xe_str == 'LTL': return 9999
+            m = re.search(r'[\d.]+', loai_xe_str)
+            return float(m.group()) if m else 9998
+
+        all_cauhinh = sorted(CauHinhLoaiXe.objects.all(), key=lambda x: tonnage_key(x.loai_xe))
+        tpl_active_types = [ch.loai_xe for ch in all_cauhinh if ch.loai_xe != 'LTL'] + ['LTL']
+        row4 += tpl_active_types
+        
         row5 = ["", "", "", "", "Số khối"]
-        for lx in ["1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T"]:
-            ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
-            if ch and ch.khoi_den is not None:
-                row5.append(f"{ch.khoi_den:g}")
+        for lx in tpl_active_types:
+            if lx == 'LTL':
+                row5.append('LTL')
             else:
-                row5.append(str(default_max[lx]))
-        row5.append("LTL")
+                ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
+                row5.append(ch.get_so_khoi() if ch else lx)
+        
+        tpl_total_cols = 5 + len(tpl_active_types)
+        
         ws.append(row4)
         ws.append(row5)
 
@@ -2515,7 +2532,7 @@ def api_download_base_price_template(request):
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
         
         for r in [4, 5]:
-            for c in range(1, 15):
+            for c in range(1, tpl_total_cols + 1):
                 cell = ws.cell(row=r, column=c)
                 cell.fill = header_fill
                 cell.font = header_font
@@ -2540,114 +2557,68 @@ def api_download_base_price_template(request):
         for col_letter in ['A', 'B', 'C', 'D']:
             ws.column_dimensions[col_letter].width = 20
         ws.column_dimensions['E'].width = 12
-        for col_letter in ['F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']:
-            ws.column_dimensions[col_letter].width = 16
+        from openpyxl.utils import get_column_letter as gcl2
+        for i in range(len(tpl_active_types)):
+            ws.column_dimensions[gcl2(6 + i)].width = 16
             
-        # Format empty rows for prices (columns F to M)
-        for row in range(6, 1001):
-            for col in range(6, 15):
-                c = ws.cell(row=row, column=col)
-                c.number_format = '#,##0'
-                c.alignment = Alignment(horizontal='right', vertical='center')
-
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="template_gia_co_so.xlsx"'
-        wb.save(response)
-        return response
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return HttpResponse(f"Lỗi tạo file mẫu: {str(e)}", status=500)
-
-
-@login_required
-def api_import_base_prices_excel(request):
-    if not request.user.is_superuser:
-        return JsonResponse({'success': False, 'error': 'Bạn không có quyền cập nhật.'})
+        # Read column headers from row 4 (vehicle names) dynamically
+        from core.models import CauHinhLoaiXe, GiaCoSo, DeXuatGiaCoSo
         
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+        loai_xe_map = {}  # col_idx -> (loai_xe, so_khoi_str)
         
-    try:
-        if 'file' not in request.FILES:
-            return JsonResponse({'success': False, 'error': 'Chưa chọn file.'})
-            
-        excel_file = request.FILES['file']
-        if not excel_file.name.endswith('.xlsx'):
-            return JsonResponse({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx'})
-            
-        import openpyxl
-        from django.utils import timezone
+        # Detect template (row4=header) vs export file (row5=header, row6=so_khoi)
+        # In template: row4 has vehicle names; in export: row5 has vehicle names
+        row4_e = ws.cell(row=4, column=6).value  # first vehicle col in row4
+        row5_e = ws.cell(row=5, column=6).value  # first vehicle col in row5
         
-        wb = openpyxl.load_workbook(excel_file, data_only=True)
-        ws = wb.active
+        if row4_e and str(row4_e).strip() in ['LTL', '1.25T', '2T', '2.5T', '3.5T', '5T']:
+            header_row = 4
+            so_khoi_row = 5
+            first_data_row = 6
+        else:
+            header_row = 5
+            so_khoi_row = 6
+            first_data_row = 7
         
-        # Read row 5 for dynamic volume configs
-        from core.models import CauHinhLoaiXe
-        
-        loai_xe_columns = {
-            6: "1.25T", 7: "2.5T", 8: "3.5T", 9: "5T",
-            10: "7T", 11: "8T", 12: "9T", 13: "15T", 14: "LTL"
-        }
-        
-        loai_xe_map = {}
-        default_max = {
-            "1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23,
-            "7T": 35, "8T": 54, "9T": 40, "15T": 54
-        }
-        prev_max = 0
-        
-        for col_idx, loai_xe in loai_xe_columns.items():
-            if loai_xe == "LTL":
-                loai_xe_map[col_idx] = ("LTL", "LTL")
+        for col_idx in range(6, ws.max_column + 1):
+            header_val = ws.cell(row=header_row, column=col_idx).value
+            if not header_val:
                 continue
-                
-            so_khoi_val = ws.cell(row=5, column=col_idx).value
-            cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
+            loai_xe = str(header_val).strip()
+            so_khoi_val = ws.cell(row=so_khoi_row, column=col_idx).value
             
+            if loai_xe == 'LTL':
+                loai_xe_map[col_idx] = ('LTL', 'LTL')
+                continue
+            
+            # If row 5 has a numeric value, use it to update CauHinhLoaiXe
             if so_khoi_val is not None:
                 try:
-                    current_max = float(so_khoi_val)
-                except ValueError:
-                    current_max = cauhinh.khoi_den if cauhinh and cauhinh.khoi_den is not None else default_max.get(loai_xe, prev_max + 5)
-            else:
-                current_max = cauhinh.khoi_den if cauhinh and cauhinh.khoi_den is not None else default_max.get(loai_xe, prev_max + 5)
-                
-            if loai_xe == "1.25T":
-                khoi_tu = 0
-            else:
-                khoi_tu = prev_max
-                
-            CauHinhLoaiXe.objects.update_or_create(
-                loai_xe=loai_xe,
-                defaults={'khoi_tu': khoi_tu, 'khoi_den': current_max}
-            )
+                    new_max = float(so_khoi_val)
+                    cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
+                    khoi_tu_val = cauhinh.khoi_tu if cauhinh and cauhinh.khoi_tu is not None else 0
+                    CauHinhLoaiXe.objects.update_or_create(
+                        loai_xe=loai_xe,
+                        defaults={'khoi_tu': khoi_tu_val, 'khoi_den': new_max}
+                    )
+                except (ValueError, TypeError):
+                    pass
             
-            def fmt_num(num):
-                return f"{num:g}"
-                
-            if loai_xe == "1.25T":
-                so_khoi_str = f"0-{fmt_num(current_max)}"
-            else:
-                if khoi_tu == current_max:
-                    so_khoi_str = f"{fmt_num(current_max)}"
-                else:
-                    so_khoi_str = f"{fmt_num(khoi_tu)}-{fmt_num(current_max)}"
-                    
+            cauhinh = CauHinhLoaiXe.objects.filter(loai_xe=loai_xe).first()
+            so_khoi_str = cauhinh.get_so_khoi() if cauhinh else str(so_khoi_val or '')
             loai_xe_map[col_idx] = (loai_xe, so_khoi_str)
-            prev_max = current_max
             
-        # Update existing records with the new so_khoi strings
+        # Sync so_khoi for all existing records
         from core.models import GiaCoSo, DeXuatGiaCoSo
         for col_idx, (loai_xe, so_khoi_str) in loai_xe_map.items():
-            if loai_xe != "LTL":
+            if loai_xe != 'LTL':
                 GiaCoSo.objects.filter(loai_xe=loai_xe).update(so_khoi=so_khoi_str)
                 DeXuatGiaCoSo.objects.filter(loai_xe=loai_xe).update(so_khoi=so_khoi_str)
         
         updated_count = 0
         created_count = 0
         
-        for r in range(6, ws.max_row + 1):
+        for r in range(first_data_row, ws.max_row + 1):
             tinh_nhan = ws.cell(row=r, column=1).value
             huyen_nhan = ws.cell(row=r, column=2).value
             tinh_giao = ws.cell(row=r, column=3).value
@@ -3177,8 +3148,17 @@ def api_delete_vehicle_setting(request, pk):
 def api_get_vehicle_settings(request):
     try:
         from core.models import CauHinhLoaiXe
-        settings = CauHinhLoaiXe.objects.all()
+        import re
+
+        def tonnage_sort_key(lx):
+            if lx.loai_xe == 'LTL':
+                return 9999
+            m = re.search(r'[\d.]+', lx.loai_xe)
+            return float(m.group()) if m else 9998
+
+        settings = sorted(CauHinhLoaiXe.objects.all(), key=tonnage_sort_key)
         data = {s.loai_xe: s.get_so_khoi() for s in settings}
-        return JsonResponse({'success': True, 'data': data})
+        ordered_types = [s.loai_xe for s in settings]
+        return JsonResponse({'success': True, 'data': data, 'ordered_types': ordered_types})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
