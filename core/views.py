@@ -757,12 +757,12 @@ def api_export_base_prices_excel(request):
         ws["A3"].font = date_font
         ws["A3"].alignment = align_center
         
-        row5 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T", "LTL"]
+        row5 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T", "LTL"]
         
         from core.models import CauHinhLoaiXe
-        default_max = {"1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18, "7T": 28, "9T": 30, "11T": 35, "15T": 40}
+        default_max = {"1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23, "7T": 35, "8T": 54, "9T": 40, "15T": 54}
         row6 = ["", "", "", "", "Số khối"]
-        for lx in ["1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T"]:
+        for lx in ["1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T"]:
             ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
             if ch and ch.khoi_den is not None:
                 row6.append(f"{ch.khoi_den:g}")
@@ -812,8 +812,8 @@ def api_export_base_prices_excel(request):
             grouped_data[route_key][g.loai_xe.strip()] = g.gia_co_so
             
         lx_cols = {
-            "1.25T": 6, "2T": 7, "3.5T": 8, "5T": 9,
-            "7T": 10, "9T": 11, "11T": 12, "15T": 13, "LTL": 14
+            "1.25T": 6, "2.5T": 7, "3.5T": 8, "5T": 9,
+            "7T": 10, "8T": 11, "9T": 12, "15T": 13, "LTL": 14
         }
         
         sorted_routes = sorted(grouped_data.keys(), key=lambda x: (x[0], x[1], x[2], x[3]))
@@ -1608,14 +1608,21 @@ def api_export_partner_template(request):
         co_khong_list = ['Có', 'Không']
         loai_thung_list = ['Thùng kín', 'Thùng bạt', 'Khác']
         so_chieu_di_list = ['1 chiều', '2 chiều']
-        tai_trong_list = ['1.25T', '2T', '3.5T', '5T', '7T', '9T', '11T', '15T', 'LTL']
-        so_khoi_list = ['0-6', '7-10', '11-14', '15-18', '19-28', '29-30', '31-35', '36-40', 'LTL']
         
-        tai_trong_mapping = {
-            '1.25T': '0-6', '2T': '7-10', '3.5T': '11-14',
-            '5T': '15-18', '7T': '19-28', '9T': '29-30',
-            '11T': '31-35', '15T': '36-40', 'LTL': 'LTL'
-        }
+        from core.models import CauHinhLoaiXe
+        active_types = ["1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T"]
+        tai_trong_list = active_types + ['LTL']
+        
+        tai_trong_mapping = {}
+        for lx in active_types:
+            ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
+            if ch:
+                tai_trong_mapping[lx] = ch.get_so_khoi()
+            else:
+                default_max = {"1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23, "7T": 35, "8T": 54, "9T": 40, "15T": 54}
+                tai_trong_mapping[lx] = str(default_max[lx])
+        tai_trong_mapping['LTL'] = 'LTL'
+        so_khoi_list = list(tai_trong_mapping.values())
         col_idx = 1
         for tt, sk in tai_trong_mapping.items():
             tt_clean = "_" + tt.replace('.', '_')
@@ -2483,12 +2490,12 @@ def api_download_base_price_template(request):
         ws["A2"].font = subtitle_font
         ws["A2"].alignment = align_center
 
-        row4 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T", "LTL"]
+        row4 = ["Tỉnh nhận", "Huyện nhận", "Tỉnh giao", "Huyện giao", "Loại xe", "1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T", "LTL"]
         
         from core.models import CauHinhLoaiXe
-        default_max = {"1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18, "7T": 28, "9T": 30, "11T": 35, "15T": 40}
+        default_max = {"1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23, "7T": 35, "8T": 54, "9T": 40, "15T": 54}
         row5 = ["", "", "", "", "Số khối"]
-        for lx in ["1.25T", "2T", "3.5T", "5T", "7T", "9T", "11T", "15T"]:
+        for lx in ["1.25T", "2.5T", "3.5T", "5T", "7T", "8T", "9T", "15T"]:
             ch = CauHinhLoaiXe.objects.filter(loai_xe=lx).first()
             if ch and ch.khoi_den is not None:
                 row5.append(f"{ch.khoi_den:g}")
@@ -2579,14 +2586,14 @@ def api_import_base_prices_excel(request):
         from core.models import CauHinhLoaiXe
         
         loai_xe_columns = {
-            6: "1.25T", 7: "2T", 8: "3.5T", 9: "5T",
-            10: "7T", 11: "9T", 12: "11T", 13: "15T", 14: "LTL"
+            6: "1.25T", 7: "2.5T", 8: "3.5T", 9: "5T",
+            10: "7T", 11: "8T", 12: "9T", 13: "15T", 14: "LTL"
         }
         
         loai_xe_map = {}
         default_max = {
-            "1.25T": 6, "2T": 10, "3.5T": 14, "5T": 18,
-            "7T": 28, "9T": 30, "11T": 35, "15T": 40
+            "1.25T": 9, "2.5T": 13, "3.5T": 18, "5T": 23,
+            "7T": 35, "8T": 54, "9T": 40, "15T": 54
         }
         prev_max = 0
         
