@@ -2591,6 +2591,10 @@ def api_import_base_prices_excel(request):
         
         loai_xe_map = {}  # col_idx -> (loai_xe, so_khoi_str)
         
+        # Kiểm tra xem đây có phải là file Bảng Giá Cơ Sở hay không
+        if ws.cell(row=4, column=1).value != "Tỉnh nhận" and ws.cell(row=5, column=1).value != "Tỉnh nhận":
+            return JsonResponse({'success': False, 'error': 'File không đúng định dạng. Vui lòng tải mẫu Bảng Giá Cơ Sở để nhập.'})
+            
         # Phát hiện định dạng file: template (row4 = header) hay export (row5 = header)
         row4_e = ws.cell(row=4, column=6).value
         if row4_e and str(row4_e).strip() in ['LTL', '1.25T', '2T', '2.5T', '3.5T', '5T',
