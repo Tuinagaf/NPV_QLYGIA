@@ -1,6 +1,14 @@
 import time
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
+
+def is_admin_or_super(user):
+    if user.is_superuser:
+        return True
+    if hasattr(user, 'profile') and user.profile.role == 'Admin':
+        return True
+    return False
+
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import models
@@ -32,7 +40,7 @@ def parse_vn_number(val):
 
 @login_required
 def dashboard(request):
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         from django.db.models import Prefetch
         partners = DoiTac.objects.prefetch_related('bao_gia__tuyen').all()
         quotes = BaoGiaThongTinXe.objects.all()
@@ -52,7 +60,7 @@ def dashboard(request):
 def partner_list(request):
     search_query = request.GET.get('search', '').strip()
     
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         from django.db.models import Prefetch
         partners = DoiTac.objects.prefetch_related('bao_gia__tuyen').all()
     else:
@@ -155,7 +163,7 @@ def partner_create(request):
         form = DoiTacForm(request.POST, user=request.user)
         if form.is_valid():
             partner = form.save(commit=False)
-            if request.user.is_authenticated and not request.user.is_superuser:
+            if request.user.is_authenticated and not is_admin_or_super(request.user):
                 partner.nguoi_quan_ly = request.user.username
             partner.save()
             process_routes(request, partner)
@@ -239,7 +247,7 @@ def partner_detail(request, pk):
             
     can_edit = False
     if request.user.is_authenticated:
-        can_edit = request.user.is_superuser or partner.nguoi_quan_ly == request.user.username
+        can_edit = is_admin_or_super(request.user) or partner.nguoi_quan_ly == request.user.username
             
     today = timezone.now().date()
             
@@ -254,7 +262,7 @@ def partner_detail(request, pk):
 
 @login_required
 def partner_update(request, pk):
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         partner = get_object_or_404(DoiTac, pk=pk)
     else:
         partner = get_object_or_404(DoiTac, pk=pk, nguoi_quan_ly=request.user.username)
@@ -338,7 +346,7 @@ def partner_add_route(request, pk):
     if request.method != 'POST':
         return redirect('partner_detail', pk=pk)
         
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         partner = get_object_or_404(DoiTac, pk=pk)
     else:
         partner = get_object_or_404(DoiTac, pk=pk, nguoi_quan_ly=request.user.username)
@@ -423,7 +431,7 @@ def api_route_detail(request, pk):
         
         can_edit = False
         if request.user.is_authenticated:
-            can_edit = request.user.is_superuser or route.doi_tac.nguoi_quan_ly == request.user.username
+            can_edit = is_admin_or_super(request.user) or route.doi_tac.nguoi_quan_ly == request.user.username
             
         history = LichSuBaoGia.objects.filter(bao_gia_ref=route).order_by('-ngay_doi_gia')
         history_data = []
@@ -474,7 +482,7 @@ def api_route_update(request, pk):
         
     try:
         data = json.loads(request.body)
-        if request.user.is_superuser:
+        if is_admin_or_super(request.user):
             route = BaoGiaThongTinXe.objects.get(pk=pk)
         else:
             route = BaoGiaThongTinXe.objects.get(pk=pk, doi_tac__nguoi_quan_ly=request.user.username)
@@ -509,7 +517,7 @@ def api_delete_route(request, pk):
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
         
     try:
-        if request.user.is_superuser:
+        if is_admin_or_super(request.user):
             route = BaoGiaThongTinXe.objects.get(pk=pk)
         else:
             route = BaoGiaThongTinXe.objects.get(pk=pk, doi_tac__nguoi_quan_ly=request.user.username)
@@ -887,7 +895,7 @@ def api_base_price_detail(request, pk):
 
 @login_required
 def api_save_base_price(request):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền thêm giá cơ sở'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -962,7 +970,7 @@ def api_save_base_price(request):
 
 @login_required
 def api_update_base_price(request, pk):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền chỉnh sửa giá cơ sở'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -1009,7 +1017,7 @@ def api_search_prices(request):
         
         
         # Build base quote query
-        if request.user.is_superuser:
+        if is_admin_or_super(request.user):
             bg_qs = BaoGiaThongTinXe.objects.select_related('doi_tac', 'tuyen').all()
         else:
             bg_qs = BaoGiaThongTinXe.objects.select_related('doi_tac', 'tuyen').filter(doi_tac__nguoi_quan_ly=request.user.username)
@@ -1097,7 +1105,7 @@ def api_search_prices(request):
 
 @login_required
 def proposal_list_view(request):
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         proposals = DeXuatGiaCoSo.objects.all().order_by('-ngay_tao')
     else:
         proposals = DeXuatGiaCoSo.objects.filter(nguoi_de_xuat=request.user.username).order_by('-ngay_tao')
@@ -1163,7 +1171,7 @@ def api_create_proposal(request):
 
 @login_required
 def api_approve_proposal(request, pk):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
     try:
@@ -1181,7 +1189,7 @@ def api_approve_proposal(request, pk):
 
 @login_required
 def api_reject_proposal(request, pk):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
     try:
@@ -1220,7 +1228,7 @@ def api_get_base_price(request):
 def api_delete_partner(request, pk):
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
-        if request.user.is_superuser: p = DoiTac.objects.get(pk=pk)
+        if is_admin_or_super(request.user): p = DoiTac.objects.get(pk=pk)
         else: p = DoiTac.objects.get(pk=pk, nguoi_quan_ly=request.user.username)
         p.is_deleted = True; p.save()
         return JsonResponse({'success': True})
@@ -1859,7 +1867,7 @@ def api_import_partners_excel(request):
             if mst_clean:
                 p_global = DoiTac.objects.filter(ma_so_thue=mst_clean).first()
                 if p_global:
-                    if not request.user.is_superuser and p_global.nguoi_quan_ly != request.user.username:
+                    if not is_admin_or_super(request.user) and p_global.nguoi_quan_ly != request.user.username:
                         manager_name = p_global.nguoi_quan_ly if p_global.nguoi_quan_ly else "Admin"
                         return JsonResponse({'success': False, 'error': f'Lỗi ở dòng {row_idx}: Nhà xe với Mã số thuế {mst_clean} đã tồn tại do {manager_name} quản lý.'})
                     else:
@@ -1867,7 +1875,7 @@ def api_import_partners_excel(request):
                         
             if not p:
                 p = DoiTac()
-                if not request.user.is_superuser:
+                if not is_admin_or_super(request.user):
                     p.nguoi_quan_ly = nguoi_quan_ly_input if nguoi_quan_ly_input else request.user.username
                 else:
                     if nguoi_quan_ly_input: p.nguoi_quan_ly = nguoi_quan_ly_input
@@ -1882,7 +1890,7 @@ def api_import_partners_excel(request):
             
             if partner_key not in partner_map:
                 if len(row) > 2 and row[2]: p.ten_nha_xe = str(row[2]).strip()
-                if request.user.is_superuser and nguoi_quan_ly_input: p.nguoi_quan_ly = nguoi_quan_ly_input
+                if is_admin_or_super(request.user) and nguoi_quan_ly_input: p.nguoi_quan_ly = nguoi_quan_ly_input
                 if so_dien_thoai_input: p.so_dien_thoai = so_dien_thoai_input
                 if len(row) > 4 and row[4]: p.dia_chi = str(row[4]).strip()
                 if len(row) > 5 and row[5]: p.ten_zalo = str(row[5]).strip()
@@ -2011,7 +2019,7 @@ def api_search_prices(request):
         
         
         # Build base quote query
-        if request.user.is_superuser:
+        if is_admin_or_super(request.user):
             bg_qs = BaoGiaThongTinXe.objects.select_related('doi_tac', 'tuyen').all()
         else:
             bg_qs = BaoGiaThongTinXe.objects.select_related('doi_tac', 'tuyen').filter(doi_tac__nguoi_quan_ly=request.user.username)
@@ -2099,7 +2107,7 @@ def api_search_prices(request):
 
 @login_required
 def proposal_list_view(request):
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         proposals = DeXuatGiaCoSo.objects.all().order_by('-ngay_tao')
     else:
         proposals = DeXuatGiaCoSo.objects.filter(nguoi_de_xuat=request.user.username).order_by('-ngay_tao')
@@ -2165,7 +2173,7 @@ def api_create_proposal(request):
 
 @login_required
 def api_approve_proposal(request, pk):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
     try:
@@ -2183,7 +2191,7 @@ def api_approve_proposal(request, pk):
 
 @login_required
 def api_reject_proposal(request, pk):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
     try:
@@ -2222,7 +2230,7 @@ def api_get_base_price(request):
 def api_delete_partner(request, pk):
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
-        if request.user.is_superuser: p = DoiTac.objects.get(pk=pk)
+        if is_admin_or_super(request.user): p = DoiTac.objects.get(pk=pk)
         else: p = DoiTac.objects.get(pk=pk, nguoi_quan_ly=request.user.username)
         p.is_deleted = True; p.save()
         return JsonResponse({'success': True})
@@ -2236,7 +2244,7 @@ def api_bulk_delete_partners(request):
         if not ids_str: return JsonResponse({'success': False, 'error': 'No ids provided'})
         ids = [int(i.strip()) for i in ids_str.split(',') if i.strip().isdigit()]
         
-        if request.user.is_superuser:
+        if is_admin_or_super(request.user):
             DoiTac.objects.filter(id__in=ids).update(is_deleted=True)
         else:
             DoiTac.objects.filter(id__in=ids, nguoi_quan_ly=request.user.username).update(is_deleted=True)
@@ -2249,7 +2257,7 @@ def api_bulk_delete_partners(request):
 def api_delete_base_price(request, pk):
     if request.method != 'POST': return JsonResponse({'success': False})
     try:
-        if not request.user.is_superuser: return JsonResponse({'success': False})
+        if not is_admin_or_super(request.user): return JsonResponse({'success': False})
         p = GiaCoSo.objects.get(pk=pk)
         p.is_deleted = True; p.save()
         return JsonResponse({'success': True})
@@ -2332,7 +2340,7 @@ def api_check_duplicate_partner_routes(request):
 
 @login_required
 def api_bulk_update_base_prices(request):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Chỉ admin mới có quyền chỉnh sửa giá cơ sở'})
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -2373,7 +2381,7 @@ def api_bulk_update_base_prices(request):
 
 @login_required
 def api_check_new_proposals(request):
-    if request.user.is_superuser:
+    if is_admin_or_super(request.user):
         count = DeXuatGiaCoSo.objects.filter(trang_thai='ChoDuyet').count()
         return JsonResponse({'success': True, 'count': count, 'role': 'admin'})
     else:
@@ -2562,7 +2570,7 @@ def api_download_base_price_template(request):
 
 @login_required
 def api_import_base_prices_excel(request):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Bạn không có quyền cập nhật.'})
         
     if request.method != 'POST':
@@ -3156,7 +3164,7 @@ import json
 
 @login_required
 def settings_vehicle_list(request):
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         from django.contrib import messages
         messages.error(request, 'Chỉ Admin Tổng mới có quyền truy cập Cấu hình hệ thống.')
         return redirect('search_prices')
@@ -3169,7 +3177,7 @@ def settings_vehicle_list(request):
 def api_save_vehicle_setting(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
         
     try:
@@ -3215,7 +3223,7 @@ def api_save_vehicle_setting(request):
 def api_delete_vehicle_setting(request, pk):
     if request.method != 'POST':
         return JsonResponse({'success': False})
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     try:
         from core.models import CauHinhLoaiXe
@@ -3247,7 +3255,7 @@ def api_get_vehicle_settings(request):
 def api_bulk_delete_base_prices(request):
     if request.method != 'POST':
         return JsonResponse({'success': False})
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     ids = request.POST.get('ids', '')
     if not ids:
@@ -3264,7 +3272,7 @@ def api_bulk_delete_base_prices(request):
 def api_bulk_delete_vehicle_settings(request):
     if request.method != 'POST':
         return JsonResponse({'success': False})
-    if not request.user.is_superuser:
+    if not is_admin_or_super(request.user):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     ids = request.POST.get('ids', '')
     if not ids:
