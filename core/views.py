@@ -688,21 +688,10 @@ def api_export_base_prices_excel(request):
         ws_data = wb.create_sheet(title="Data")
         ws_data.sheet_state = 'hidden'
 
-        import urllib.request
-        import json
-        from django.core.cache import cache
+        from core.constants import PROVINCES_DATA
+        provinces_data = PROVINCES_DATA
         from openpyxl.worksheet.datavalidation import DataValidation
         from openpyxl.utils import get_column_letter
-
-        provinces_data = cache.get('provinces_data_full')
-        if not provinces_data:
-            try:
-                req = urllib.request.Request('https://provinces.open-api.vn/api/?depth=2', headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    provinces_data = json.loads(response.read().decode())
-                cache.set('provinces_data_full', provinces_data, 86400)
-            except Exception as e:
-                provinces_data = []
 
         def clean_name(s):
             return s.replace(" ", "").replace("-", "").replace(".", "")
@@ -2422,17 +2411,8 @@ def api_download_base_price_template(request):
         ws_data = wb.create_sheet(title="Data")
         ws_data.sheet_state = 'hidden'
 
-        provinces_data = cache.get('provinces_data_full')
-        if not provinces_data:
-            try:
-                # Try fetching from API
-                req = urllib.request.Request('https://provinces.open-api.vn/api/?depth=2', headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    provinces_data = json.loads(response.read().decode())
-                cache.set('provinces_data_full', provinces_data, 86400)
-            except Exception as e:
-                print("Error fetching provinces:", e)
-                provinces_data = []
+        from core.constants import PROVINCES_DATA
+        provinces_data = PROVINCES_DATA
 
         import re
         import unicodedata
