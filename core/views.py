@@ -2561,6 +2561,45 @@ def api_download_base_price_template(request):
         for i in range(len(tpl_active_types)):
             ws.column_dimensions[gcl2(6 + i)].width = 16
             
+        # Format price cells
+        for row in range(6, 1001):
+            for col in range(6, 6 + len(tpl_active_types)):
+                c = ws.cell(row=row, column=col)
+                c.number_format = '#,##0'
+                c.alignment = Alignment(horizontal='right', vertical='center')
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="template_gia_co_so.xlsx"'
+        wb.save(response)
+        return response
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Lỗi tạo file mẫu: {str(e)}", status=500)
+
+
+@login_required
+def api_import_base_prices_excel(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền cập nhật.'})
+        
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'})
+        
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'Chưa chọn file.'})
+            
+        excel_file = request.FILES['file']
+        if not excel_file.name.endswith('.xlsx'):
+            return JsonResponse({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx'})
+            
+        import openpyxl
+        from django.utils import timezone
+        
+        wb = openpyxl.load_workbook(excel_file, data_only=True)
+        ws = wb.active
+
         # ----------------------------------------------------------------
         # ĐỌC CỘT LOẠI XE ĐỘNG TỪ FILE EXCEL (không hardcode vị trí)
         # ----------------------------------------------------------------
