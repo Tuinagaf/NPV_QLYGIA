@@ -408,13 +408,25 @@
                 });
 
                 document.querySelectorAll('select[name="so_khoi[]"]').forEach(select => {
-                    if (select.closest('#empty-form-template')) return;
-                    const currentVal = select.value;
+                    const isTemplate = select.closest('#empty-form-template') !== null;
+                    const currentVal = select.dataset.initialValue || select.value;
                     select.innerHTML = '<option value="">Chọn số khối</option>';
                     sortedSoKhoiList.forEach(khoi => {
                         select.add(new Option(khoi, khoi));
                     });
-                    if (uniqueSoKhoi.has(currentVal)) select.value = currentVal;
+                    if (!isTemplate && uniqueSoKhoi.has(currentVal)) select.value = currentVal;
+                });
+
+                document.querySelectorAll('select[name="tai_trong_tan[]"]').forEach(select => {
+                    const isTemplate = select.closest('#empty-form-template') !== null;
+                    const currentVal = select.dataset.initialValue || select.value;
+                    select.innerHTML = '<option value="">Chọn tải trọng</option>';
+                    for (const lx of Object.keys(vehicleSettings)) {
+                        select.add(new Option(lx, lx));
+                    }
+                    if (!isTemplate && (vehicleSettings.hasOwnProperty(currentVal) || currentVal)) {
+                        select.value = currentVal;
+                    }
                 });
             }
         } catch (e) { console.error('Failed to load vehicle settings', e); }

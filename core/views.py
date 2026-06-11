@@ -1624,25 +1624,25 @@ def api_export_partner_template(request):
             hidden_ws.cell(row=2, column=col_idx, value=sk)
             col_letter = openpyxl.utils.get_column_letter(col_idx)
             ref = f"ListData!${col_letter}$2:${col_letter}$2"
-            wb.create_named_range(tt_clean, None, ref)
+            wb.defined_names.add(DefinedName(name=tt_clean, attr_text=ref))
             col_idx += 1
             
-        lists = [
-            ("SanSang", san_sang_list),
-            ("CoKhong", co_khong_list),
-            ("LoaiThung", loai_thung_list),
-            ("SoChieuDi", so_chieu_di_list),
-            ("TaiTrong", tai_trong_list),
-            ("SoKhoi", so_khoi_list)
-        ]
+        predefined_lists = {
+            "SanSang": san_sang_list,
+            "CoKhong": co_khong_list,
+            "LoaiThung": loai_thung_list,
+            "SoChieuDi": so_chieu_di_list,
+            "TaiTrong": tai_trong_list,
+            "SoKhoi": so_khoi_list
+        }
         
-        for name, items in lists:
+        for name, items in predefined_lists.items():
             hidden_ws.cell(row=1, column=col_idx, value=name)
             for i, v in enumerate(items, 2):
                 hidden_ws.cell(row=i, column=col_idx, value=v)
             col_letter = openpyxl.utils.get_column_letter(col_idx)
             ref = f"ListData!${col_letter}$2:${col_letter}${len(items)+1}"
-            wb.create_named_range(name, None, ref)
+            wb.defined_names.add(DefinedName(name=name, attr_text=ref))
             col_idx += 1
             
         def clean_name(s):
@@ -1655,7 +1655,7 @@ def api_export_partner_template(request):
             hidden_ws.cell(row=i, column=col_idx, value=p)
         col_letter = openpyxl.utils.get_column_letter(col_idx)
         ref = f"ListData!${col_letter}$2:${col_letter}${len(provinces)+1}"
-        wb.create_named_range("Provinces", None, ref)
+        wb.defined_names.add(DefinedName(name="Provinces", attr_text=ref))
         col_idx += 1
         
         for p_data in PROVINCES_DATA:
@@ -2444,7 +2444,8 @@ def api_download_base_price_template(request):
             c_name = clean_name(p_name)
             # Create named range (openpyxl allows unicode names for named ranges!)
             try:
-                wb.create_named_range(c_name, None, ref)
+                from openpyxl.workbook.defined_name import DefinedName
+                wb.defined_names.add(DefinedName(name=c_name, attr_text=ref))
             except Exception as e:
                 print("Could not create named range for", c_name, e)
             
@@ -2456,7 +2457,8 @@ def api_download_base_price_template(request):
             ws_data.cell(row=r_idx, column=1, value=p_name)
         
         # Create named range for all provinces
-        wb.create_named_range("AllProvinces", None, f"Data!$A$2:$A${len(province_names)+1}")
+        from openpyxl.workbook.defined_name import DefinedName
+        wb.defined_names.add(DefinedName(name="AllProvinces", attr_text=f"Data!$A$2:$A${len(province_names)+1}"))
 
         # Setup Template Sheet headers
         ws.append(["CÔNG TY CỔ PHẦN NHẤT PHONG VẬN"])
@@ -2891,9 +2893,12 @@ def _get_core_permissions():
 
 @login_required
 def account_list(request):
-    """Trang danh sách tài khoản - chỉ Admin Tổng."""
-    if not request.user.is_superuser:
-        messages.error(request, 'Chỉ Admin Tổng mới có quyền truy cập Quản lý tài khoản.')
+    """Trang danh sách tài khoản - dành cho Admin."""
+    is_admin_tong = request.user.is_superuser
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'Admin'
+    
+    if not (is_admin_tong or is_admin):
+        messages.error(request, 'Chỉ Admin mới có quyền truy cập Quản lý tài khoản.')
         return redirect('search_prices')
     users = User.objects.all().order_by('-date_joined')
     return render(request, 'core/account_list.html', {
@@ -2901,6 +2906,7 @@ def account_list(request):
         'active_count': users.filter(is_active=True).count(),
         'inactive_count': users.filter(is_active=False).count(),
         'admin_count': users.filter(is_superuser=True).count(),
+        'is_admin_tong': is_admin_tong
     })
 
 
@@ -2908,8 +2914,9 @@ def account_list(request):
 def account_create(request):
     """Trang tạo tài khoản mới."""
     from django.contrib.auth.models import Permission
-    if not request.user.is_superuser:
-        messages.error(request, 'Chỉ Admin Tổng mới có quyền tạo tài khoản.')
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'Admin'
+    if not (request.user.is_superuser or is_admin):
+        messages.error(request, 'Chỉ Admin mới có quyền tạo tài khoản.')
         return redirect('search_prices')
 
     core_permissions = _get_core_permissions()
@@ -2943,6 +2950,11 @@ def account_create(request):
             is_active=True,
             is_staff=True,
         )
+        
+        # Create UserProfile to link created_by and assign Admin role
+        from core.models import UserProfile
+        UserProfile.objects.create(user=user, role='Admin', created_by=request.user)
+        
         if perm_ids:
             perms = Permission.objects.filter(id__in=perm_ids)
             user.user_permissions.set(perms)
@@ -2961,11 +2973,17 @@ def account_create(request):
 def account_update(request, pk):
     """Trang chỉnh sửa tài khoản."""
     from django.contrib.auth.models import Permission
-    if not request.user.is_superuser:
-        messages.error(request, 'Chỉ Admin Tổng mới có quyền sửa tài khoản.')
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'Admin'
+    if not (request.user.is_superuser or is_admin):
+        messages.error(request, 'Chỉ Admin mới có quyền sửa tài khoản.')
         return redirect('search_prices')
 
     edit_user = get_object_or_404(User, pk=pk)
+    
+    if not request.user.is_superuser:
+        if hasattr(edit_user, 'profile') and edit_user.profile.role == 'Admin' and edit_user != request.user:
+            messages.error(request, 'Bạn không thể sửa tài khoản Admin khác.')
+            return redirect('account_list')
     core_permissions = _get_core_permissions()
     user_perms = list(edit_user.user_permissions.values_list('id', flat=True))
 
@@ -3007,14 +3025,24 @@ def api_delete_account(request, pk):
     """API xóa tài khoản (dùng cho nút Xóa trên trang account_list)."""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'})
-    if not request.user.is_superuser:
+        
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'Admin'
+    if not (request.user.is_superuser or is_admin):
         return JsonResponse({'success': False, 'error': 'Không có quyền'})
+        
     try:
         user = get_object_or_404(User, pk=pk)
         if user == request.user:
             return JsonResponse({'success': False, 'error': 'Bạn không thể tự xóa tài khoản của mình'})
+            
         if user.is_superuser:
             return JsonResponse({'success': False, 'error': 'Không thể xóa tài khoản Admin Tổng'})
+            
+        if not request.user.is_superuser:
+            if hasattr(user, 'profile') and user.profile.role == 'Admin':
+                if user.profile.created_by != request.user:
+                    return JsonResponse({'success': False, 'error': 'Bạn không thể xóa tài khoản Admin khác nếu không phải người tạo'})
+        
         user.delete()
         return JsonResponse({'success': True})
     except Exception as e:

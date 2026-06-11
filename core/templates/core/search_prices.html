@@ -28,15 +28,6 @@
             <label class="form-label" style="font-size: 0.8rem">Loại xe</label>
             <select id="filterLoaiXe" class="form-control" onchange="handleLoaiXeInput(this, 'filterKhoi')">
                 <option value="">Chọn loại xe</option>
-                <option value="1.25T">1.25T</option>
-                <option value="2T">2T</option>
-                <option value="3.5T">3.5T</option>
-                <option value="5T">5T</option>
-                <option value="7T">7T</option>
-                <option value="9T">9T</option>
-                <option value="11T">11T</option>
-                <option value="15T">15T</option>
-                <option value="LTL">LTL</option>
             </select>
         </div>
         <div>
@@ -107,6 +98,17 @@
             const result = await res.json();
             if (result.success) {
                 vehicleSettings = result.data;
+                const loaixeSelect = $('#filterLoaiXe');
+                const currentLx = loaixeSelect.val();
+                loaixeSelect.empty().append('<option value="">Chọn loại xe</option>');
+                for (const lx of Object.keys(vehicleSettings)) {
+                    loaixeSelect.append(new Option(lx, lx));
+                }
+                if (currentLx && vehicleSettings.hasOwnProperty(currentLx)) {
+                    loaixeSelect.val(currentLx);
+                }
+                loaixeSelect.trigger('change.select2');
+
                 const soKhoiSelect = $('#filterKhoi');
                 const currentVal = soKhoiSelect.val();
                 soKhoiSelect.empty().append('<option value="">Tất cả</option>');
