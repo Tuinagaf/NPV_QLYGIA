@@ -158,6 +158,8 @@
                     <td>
                         {% if u.is_superuser %}
                             <span class="badge badge-superuser">Admin Tổng</span>
+                        {% elif u.profile and u.profile.role == 'Admin' %}
+                            <span class="badge badge-superuser" style="background:#e0e7ff; color:#4338ca;">Admin</span>
                         {% else %}
                             <span class="badge badge-employee">Nhân viên</span>
                         {% endif %}

@@ -2882,13 +2882,21 @@ def _get_core_permissions():
         'change_tuyenxe': 'Sửa Tuyến xe',
         'delete_tuyenxe': 'Xóa Tuyến xe',
         'view_tuyenxe': 'Xem Tuyến xe',
+        'add_cauhinhloaixe': 'Thêm Cấu hình tải trọng',
+        'change_cauhinhloaixe': 'Sửa Cấu hình tải trọng',
+        'delete_cauhinhloaixe': 'Xóa Cấu hình tải trọng',
+        'view_cauhinhloaixe': 'Xem Cấu hình tải trọng',
+        'add_user': 'Thêm Tài khoản',
+        'change_user': 'Sửa Tài khoản',
+        'delete_user': 'Xóa Tài khoản',
+        'view_user': 'Xem Tài khoản',
     }
-    core_ct = ContentType.objects.filter(app_label='core')
+    target_ct = ContentType.objects.filter(app_label__in=['core', 'auth'])
     # Chỉ lấy các quyền chính (thêm, sửa, xóa, xem) cho các model quan trọng
     allowed_prefixes = ('add_', 'change_', 'delete_', 'view_')
-    important_models = ('doitac', 'giacoso', 'dexuatgiacoso')
+    important_models = ('doitac', 'giacoso', 'dexuatgiacoso', 'cauhinhloaixe', 'user')
     perms = []
-    for p in Permission.objects.filter(content_type__in=core_ct).order_by('content_type__model', 'codename'):
+    for p in Permission.objects.filter(content_type__in=target_ct).order_by('content_type__model', 'codename'):
         model_name = '_'.join(p.codename.split('_')[1:])
         if model_name not in important_models:
             continue
@@ -2959,13 +2967,22 @@ def account_create(request):
             is_staff=True,
         )
         
-        # Create UserProfile to link created_by and assign Admin role
-        from core.models import UserProfile
-        UserProfile.objects.create(user=user, role='Admin', created_by=request.user)
-        
+        role = 'Nhân viên'
         if perm_ids:
             perms = Permission.objects.filter(id__in=perm_ids)
             user.user_permissions.set(perms)
+            
+            admin_codenames = [
+                'change_giacoso', 'delete_giacoso', 'add_giacoso',
+                'change_cauhinhloaixe', 'delete_cauhinhloaixe', 'add_cauhinhloaixe',
+                'change_user', 'delete_user', 'add_user'
+            ]
+            if perms.filter(codename__in=admin_codenames).exists():
+                role = 'Admin'
+
+        # Create UserProfile to link created_by and assign dynamic role
+        from core.models import UserProfile
+        UserProfile.objects.create(user=user, role=role, created_by=request.user)
 
         messages.success(request, f'✅ Đã tạo tài khoản "{username}" thành công!')
         return redirect('account_list')
@@ -2989,8 +3006,8 @@ def account_update(request, pk):
     edit_user = get_object_or_404(User, pk=pk)
     
     if not request.user.is_superuser:
-        if hasattr(edit_user, 'profile') and edit_user.profile.role == 'Admin' and edit_user != request.user:
-            messages.error(request, 'Bạn không thể sửa tài khoản Admin khác.')
+        if hasattr(edit_user, 'profile') and edit_user.profile.role == 'Admin' and edit_user != request.user and edit_user.profile.created_by != request.user:
+            messages.error(request, 'Bạn không thể sửa tài khoản Admin khác nếu không phải người tạo.')
             return redirect('account_list')
     core_permissions = _get_core_permissions()
     user_perms = list(edit_user.user_permissions.values_list('id', flat=True))
@@ -3015,6 +3032,22 @@ def account_update(request, pk):
             edit_user.is_active = is_active
             perms = Permission.objects.filter(id__in=perm_ids)
             edit_user.user_permissions.set(perms)
+            
+            role = 'Nhân viên'
+            admin_codenames = [
+                'change_giacoso', 'delete_giacoso', 'add_giacoso',
+                'change_cauhinhloaixe', 'delete_cauhinhloaixe', 'add_cauhinhloaixe',
+                'change_user', 'delete_user', 'add_user'
+            ]
+            if perms.filter(codename__in=admin_codenames).exists():
+                role = 'Admin'
+                
+            if hasattr(edit_user, 'profile'):
+                edit_user.profile.role = role
+                edit_user.profile.save()
+            else:
+                from core.models import UserProfile
+                UserProfile.objects.create(user=edit_user, role=role, created_by=request.user)
 
         edit_user.save()
         messages.success(request, f'✅ Đã cập nhật tài khoản "{edit_user.username}" thành công!')
