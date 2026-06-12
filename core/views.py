@@ -699,6 +699,7 @@ def api_export_base_prices_excel(request):
         from core.constants import PROVINCES_DATA
         provinces_data = PROVINCES_DATA
         from openpyxl.worksheet.datavalidation import DataValidation
+        from openpyxl.workbook.defined_name import DefinedName
         from openpyxl.utils import get_column_letter
 
         def clean_name(s):
@@ -719,7 +720,7 @@ def api_export_base_prices_excel(request):
             ref = f"Data!${c_letter}$2:${c_letter}${len(d_names)+1}"
             c_name = clean_name(p_name)
             try:
-                wb.create_named_range(c_name, None, ref)
+                wb.defined_names.add(DefinedName(name=c_name, attr_text=ref))
             except Exception as e:
                 pass
             
@@ -729,7 +730,7 @@ def api_export_base_prices_excel(request):
         for r_idx, p_name in enumerate(province_names, start=2):
             ws_data.cell(row=r_idx, column=1, value=p_name)
         
-        wb.create_named_range("AllProvinces", None, f"Data!$A$2:$A${len(province_names)+1}")
+        wb.defined_names.add(DefinedName(name="AllProvinces", attr_text=f"Data!$A$2:$A${len(province_names)+1}"))
         
         ws.append(["CÔNG TY CỔ PHẦN NHẤT PHONG VẬN"])
         ws.append(["BẢNG GIÁ CƠ SỞ"])
@@ -1594,6 +1595,7 @@ def api_export_partner_template(request):
         from django.http import HttpResponse
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.worksheet.datavalidation import DataValidation
+        from openpyxl.workbook.defined_name import DefinedName
         from core.constants import PROVINCES_DATA
         import re
         
@@ -1677,7 +1679,7 @@ def api_export_partner_template(request):
                 
             col_letter = openpyxl.utils.get_column_letter(col_idx)
             ref = f"ListData!${col_letter}$2:${col_letter}${len(districts)+1}"
-            wb.create_named_range(p_name_clean, None, ref)
+            wb.defined_names.add(DefinedName(name=p_name_clean, attr_text=ref))
             col_idx += 1
         
         ws.append(["CÔNG TY CỔ PHẦN NHẤT PHONG VẬN"])
@@ -2406,6 +2408,7 @@ def api_download_base_price_template(request):
         import urllib.request
         import json
         from openpyxl.worksheet.datavalidation import DataValidation
+        from openpyxl.workbook.defined_name import DefinedName
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         from django.http import HttpResponse
